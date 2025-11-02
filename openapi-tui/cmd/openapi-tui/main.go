@@ -324,6 +324,18 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				return m, nil
+			case "j":
+				if len(m.TestModel.Results) > 0 {
+					specPath := m.TestModel.SpecInput.Value()
+					baseURL := m.TestModel.UrlInput.Value()
+					filename, err := export.ExportResultsToJUnit(m.TestModel.Results, specPath, baseURL)
+					if err != nil {
+						m.TestModel.Err = errors.EnhanceFileError(err, "JUnit XML export file")
+					} else {
+						m.TestModel.ExportSuccess = fmt.Sprintf("✅ Exported JUnit XML to %s", filename)
+					}
+				}
+				return m, nil
 			case "l":
 				if m.VerboseMode && len(m.TestModel.Results) > 0 {
 					selectedIdx := m.TestModel.Table.Cursor()

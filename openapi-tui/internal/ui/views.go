@@ -296,11 +296,11 @@ func ViewTest(m models.Model) string {
 			}
 		}
 		// Add instructions
-		instructions := "Press 'f' to filter | 'e' export JSON | 'h' export HTML"
+		instructions := "Press 'f' to filter | 'e' JSON | 'h' HTML | 'j' JUnit XML"
 		if m.VerboseMode {
-			instructions += " | 'l' to view logs"
+			instructions += " | 'l' logs"
 		}
-		instructions += " | Enter to return to menu"
+		instructions += " | Enter to return"
 		content += "\n\n" + lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#888")).
 			Render(instructions)

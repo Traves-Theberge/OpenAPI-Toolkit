@@ -374,11 +374,71 @@ All Tests:       PASSING ✅
   - No external dependencies (self-contained HTML)
   - Better than JSON for visual analysis
 
+#### 9. JUnit XML Export
+- **Status**: Complete ✅
+- **Implementation**:
+  - `junit.go` (236 lines) - JUnit XML export with proper structure
+    - `ExportResultsToJUnit()` - Main XML generation function
+    - `JUnitTestSuites`, `JUnitTestSuite`, `JUnitTestCase` structs
+    - `JUnitFailure`, `JUnitError` for test failures
+    - `sanitizeClassName()` - Converts URLs to Java-style class names
+    - `formatDurationSeconds()` - Duration in seconds format
+  - `junit_test.go` (394 lines) - Comprehensive test suite
+    - 4 test functions, 20 test cases total
+    - `TestExportResultsToJUnit` - 5 export scenarios
+    - `TestSanitizeClassName` - 6 URL sanitization tests
+    - `TestFormatDurationSeconds` - 6 duration format tests
+    - `TestJUnitXMLStructure` - XML structure validation
+  - Key binding 'j' in `main.go` case 3 for JUnit export
+  - Updated instructions in `views.go` to show JUnit export option
+- **Features**:
+  - ✅ Standard JUnit XML format (compatible with Jenkins, GitLab CI, GitHub Actions)
+  - ✅ Test suite with counts: tests, failures, errors, skipped
+  - ✅ Proper failure/error distinction (ERR = error, non-2xx = failure)
+  - ✅ Timing data in seconds with 3 decimal precision
+  - ✅ Properties section with metadata (spec_path, base_url, test_framework)
+  - ✅ System-out for verbose log data (request/response details)
+  - ✅ Timestamped test suite (ISO 8601 format)
+  - ✅ Java-style class names from URLs
+  - ✅ Detailed failure messages with endpoint/method context
+  - ✅ XML declaration and proper formatting
+  - ✅ Filename format: `openapi-test-results_YYYYMMDD_HHMMSS.xml`
+- **JUnit XML Structure**:
+  ```xml
+  <testsuites>
+    <testsuite name="OpenAPI Tests" tests="X" failures="Y" errors="Z" time="T">
+      <properties>
+        <property name="spec_path" value="..."/>
+        <property name="base_url" value="..."/>
+      </properties>
+      <testcase name="GET /endpoint" classname="api.example.com" time="0.125">
+        <failure message="HTTP 404: Not Found" type="AssertionFailure">...</failure>
+        <system-out>Request/Response details...</system-out>
+      </testcase>
+    </testsuite>
+  </testsuites>
+  ```
+- **Test Coverage**: 20 test cases, all passing
+  - XML structure validation
+  - Proper failure/error categorization
+  - Properties and metadata verification
+  - System-out for verbose logs
+  - Class name sanitization tests
+  - Duration formatting accuracy
+- **Impact**:
+  - **CI/CD integration** with Jenkins, GitLab CI, GitHub Actions, CircleCI
+  - Automated test reporting in pipelines
+  - Build failure detection based on test results
+  - Standard format recognized by all major CI tools
+  - Historical test tracking in CI dashboards
+  - Trend analysis and flaky test detection
+  - Professional QA workflow integration
+
 ## Summary
 
 **Phase 1 Status**: ✅ COMPLETE (5/5 features - 100%)
-**Phase 2 Status**: 🚀 IN PROGRESS (8/15 features - 53%)
-**Test Coverage**: 66 tests passing (25 HTML + 24 filter + 12 stats + 17 main, 1 skipped)
+**Phase 2 Status**: 🚀 IN PROGRESS (9/15 features - 60%)
+**Test Coverage**: 86 tests passing (20 JUnit + 25 HTML + 24 filter + 12 stats + 17 main, 1 skipped)
 **Build Status**: ✅ All tests passing, binary builds successfully
 **Code Organization**: ✅ Standard Go project layout (cmd/ + internal/)
 **Documentation**: ✅ README, ARCHITECTURE, and PROGRESS fully updated
@@ -393,6 +453,7 @@ The application now:
 - ✅ Provides actionable error messages with helpful suggestions
 - ✅ Exports test results to JSON for CI/CD integration
 - ✅ **Exports test results to professional HTML reports**
+- ✅ **Exports test results to JUnit XML for CI/CD pipelines**
 - ✅ Verbose logging mode with full request/response details
 - ✅ Configuration persistence across sessions
 - ✅ **Standard Go project layout with modular architecture**
@@ -400,6 +461,6 @@ The application now:
 - ✅ **Real-time response filtering with special keywords**
 
 **Phase 1 Achievement**: All critical foundation features delivered! 🎉
-**Phase 2 Progress**: 8/15 features complete (53%) - Over halfway there! 🚀
+**Phase 2 Progress**: 9/15 features complete (60%) - Almost two-thirds done! 🚀
 **Architecture**: Refactored to standard Go layout (cmd/ + internal/ packages)
-**Latest Feature**: HTML export with professional styling and embedded CSS 📄
+**Latest Feature**: JUnit XML export for CI/CD integration (Jenkins, GitLab, GitHub Actions) �
