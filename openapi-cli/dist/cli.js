@@ -30,6 +30,7 @@ program
     .argument('<baseUrl>', 'Base URL of the API to test')
     .option('-e, --export <file>', 'Export results to JSON file')
     .option('--export-html <file>', 'Export results to HTML file')
+    .option('--export-junit <file>', 'Export results to JUnit XML file')
     .option('-v, --verbose', 'Show verbose output with request/response details')
     .option('-t, --timeout <ms>', 'Request timeout in milliseconds (default: 10000)', '10000')
     .option('--auth-bearer <token>', 'Bearer token authentication')

@@ -181,7 +181,7 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 ---
 
-## Phase 3: Advanced Features (9 of 15 Complete) 🎯
+## Phase 3: Advanced Features (10 of 15 Complete) 🎯
 
 ### ✅ Completed Features (Phase 3)
 
@@ -321,9 +321,27 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 - **Testing**: Tested with success/failure scenarios, combined with JSON export, all tests pass
 - **Documentation**: Comprehensive README section with features and examples
 
+#### 10. JUnit XML Export
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - `--export-junit <file>` flag for JUnit XML generation
+  - Standard JUnit XML schema compliant
+  - Compatible with Jenkins, GitLab CI, GitHub Actions
+  - Test duration in seconds with 3 decimal precision
+  - Failure elements with message, type, and details
+  - Properties: spec path, base URL, timestamp
+  - System output with test summary
+  - XML character escaping (ampersand, less than, greater than, quotes)
+- **Files**: `src/cli.ts` (lines 35, 51), `src/commands/test.ts` (lines 27, 206-226, 240-309)
+- **XML Features**: testsuite/testcase structure, hostname from URL, classname by HTTP method
+- **Use Cases**: CI/CD integration, trend analysis, failure tracking, team dashboards, quality gates
+- **Testing**: Tested with success/failure scenarios, verified XML structure, all tests pass
+- **Documentation**: Comprehensive README with CI/CD examples (Jenkins, GitHub Actions, GitLab CI)
+
 ---
 
-### 🚀 Planned Features (6 remaining)
+### 🚀 Planned Features (5 remaining)
 
 #### High Priority
 
@@ -336,19 +354,12 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 #### Medium Priority
 
-6. **Response Schema Validation** ⭐⭐
+2. **Response Schema Validation** ⭐⭐
    - Validate response bodies against schema
    - Report schema mismatches
    - Detailed validation errors
    - **Complexity**: High (requires OpenAPI parser)
    - **Impact**: High
-
-7. **JUnit XML Export** ⭐
-   - `--export-junit <file>` flag
-   - CI/CD test report integration
-   - Standard JUnit XML format
-   - **Complexity**: Medium
-   - **Impact**: Medium
 
 8. **Retry Logic** ⭐
    - `--retry <count>` flag

@@ -25,6 +25,7 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **Parallel Execution** - Run tests concurrently with configurable concurrency limit (--parallel 5)
 - **Schema-Based Body Generation** - Automatically generate request bodies from JSON Schema definitions
 - **HTML Export** - Generate beautiful, styled HTML reports for test results (--export-html)
+- **JUnit XML Export** - Generate JUnit XML reports for CI/CD integration (--export-junit)
 
 ## Installation
 
@@ -770,6 +771,115 @@ openapi-test test spec.yaml https://api.example.com \
 - Can be opened directly or served via web server
 - Embedded CSS uses modern flexbox/grid layouts
 - Print media queries optimize for PDF export
+
+### JUnit XML Export
+
+Generate JUnit XML format test reports for seamless CI/CD integration with Jenkins, GitLab CI, GitHub Actions, and other tools:
+
+**Basic Usage:**
+```bash
+# Generate JUnit XML report
+openapi-test test spec.yaml https://api.example.com --export-junit results.xml
+
+# Combine with other export formats
+openapi-test test spec.yaml https://api.example.com \
+  --export results.json \
+  --export-html report.html \
+  --export-junit junit.xml
+```
+
+**XML Format:**
+- Standard JUnit XML schema compliant
+- Compatible with all major CI/CD platforms
+- Includes test duration, failure messages, and metadata
+- Groups tests by API title as test suite
+- Classname format: `{API Title}.{HTTP Method}`
+
+**Sample XML Structure:**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="My API" tests="10" failures="2" errors="0" time="1.234">
+  <testsuite name="My API" tests="10" failures="2" errors="0" time="1.234">
+    <properties>
+      <property name="spec" value="spec.yaml"/>
+      <property name="baseUrl" value="https://api.example.com"/>
+    </properties>
+    <testcase name="GET /users" classname="My API.GET" time="0.156"/>
+    <testcase name="POST /users" classname="My API.POST" time="0.234">
+      <failure message="HTTP 404 Not Found" type="HTTP 404">
+        Test: POST /users
+        Status: 404
+        Message: HTTP 404 Not Found
+        Endpoint: https://api.example.com/users
+      </failure>
+    </testcase>
+  </testsuite>
+</testsuites>
+```
+
+**CI/CD Integration Examples:**
+
+**Jenkins:**
+```groovy
+pipeline {
+  stages {
+    stage('API Tests') {
+      steps {
+        sh 'openapi-test test spec.yaml https://api.example.com --export-junit results.xml'
+      }
+      post {
+        always {
+          junit 'results.xml'
+        }
+      }
+    }
+  }
+}
+```
+
+**GitHub Actions:**
+```yaml
+- name: Run API Tests
+  run: openapi-test test spec.yaml https://api.example.com --export-junit results.xml
+
+- name: Publish Test Results
+  uses: EnricoMi/publish-unit-test-result-action@v2
+  if: always()
+  with:
+    files: results.xml
+```
+
+**GitLab CI:**
+```yaml
+api-tests:
+  script:
+    - openapi-test test spec.yaml https://api.example.com --export-junit results.xml
+  artifacts:
+    reports:
+      junit: results.xml
+```
+
+**Use Cases:**
+- **CI/CD Integration**: Automatic test reporting in pipelines
+- **Trend Analysis**: Track API reliability over time
+- **Failure Tracking**: Detailed failure information for debugging
+- **Team Dashboards**: Visual test results in CI tools
+- **Quality Gates**: Block deployments on test failures
+
+**Features:**
+- Test duration in seconds (3 decimal places)
+- Failure type and message for failed tests
+- System output with test summary
+- Properties for spec path, base URL, timestamp
+- Hostname extracted from base URL
+- XML character escaping for special characters
+
+**Notes:**
+- Time values are in seconds (JUnit standard)
+- Failed tests include `<failure>` element with details
+- All tests have unique names: `{METHOD} {ENDPOINT}`
+- Compatible with JUnit 4 and 5 report parsers
+- Works with all CLI features (filters, auth, parallel, etc.)
 
 ### Enhanced Error Messages
 

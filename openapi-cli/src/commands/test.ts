@@ -24,6 +24,7 @@ interface TestResult {
 interface TestOptions {
   export?: string;
   exportHtml?: string;
+  exportJunit?: string;
   verbose?: boolean;
   timeout?: string;
   authBearer?: string;
@@ -202,6 +203,28 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
     }
   }
 
+  // Export JUnit XML if requested
+  if (options.exportJunit) {
+    try {
+      const xml = generateJunitXml({
+        timestamp: new Date().toISOString(),
+        specPath,
+        baseUrl,
+        totalTests: results.length,
+        passed: successCount,
+        failed: failureCount,
+        results,
+      }, spec.info.title);
+
+      fs.writeFileSync(options.exportJunit, xml, 'utf-8');
+      if (!options.quiet) {
+        console.log(`\x1b[32m✓ JUnit XML exported to ${options.exportJunit}\x1b[0m`);
+      }
+    } catch (error) {
+      console.error(`\x1b[31m✗ Failed to export JUnit XML: ${error instanceof Error ? error.message : String(error)}\x1b[0m`);
+    }
+  }
+
   if (failureCount > 0) {
     if (!options.quiet) {
       console.log(`\x1b[31m✗ Some tests failed\x1b[0m\n`);
@@ -212,6 +235,77 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
       console.log(`\x1b[32m✓ All tests passed!\x1b[0m\n`);
     }
   }
+}
+
+/**
+ * Generate JUnit XML from test results
+ */
+function generateJunitXml(data: {
+  timestamp: string;
+  specPath: string;
+  baseUrl: string;
+  totalTests: number;
+  passed: number;
+  failed: number;
+  results: TestResult[];
+}, apiTitle: string): string {
+  // Calculate total time in seconds
+  const totalTime = data.results.reduce((sum, r) => sum + (r.duration || 0), 0) / 1000;
+
+  // Escape XML special characters
+  const escapeXml = (str: string): string => {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  };
+
+  // Generate testcase elements
+  const testCases = data.results.map(r => {
+    const testName = `${r.method} ${r.endpoint}`;
+    const className = `${apiTitle}.${r.method}`;
+    const time = r.duration ? (r.duration / 1000).toFixed(3) : '0.000';
+
+    if (r.success) {
+      return `    <testcase name="${escapeXml(testName)}" classname="${escapeXml(className)}" time="${time}"/>`;
+    } else {
+      const failureMessage = escapeXml(r.message);
+      const failureType = r.status ? `HTTP ${r.status}` : 'Error';
+      return `    <testcase name="${escapeXml(testName)}" classname="${escapeXml(className)}" time="${time}">
+      <failure message="${failureMessage}" type="${failureType}">
+Test: ${escapeXml(testName)}
+Status: ${r.status || 'N/A'}
+Message: ${failureMessage}
+Endpoint: ${escapeXml(data.baseUrl + r.endpoint)}
+      </failure>
+    </testcase>`;
+    }
+  }).join('\n');
+
+  const hostname = new URL(data.baseUrl).hostname;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="${escapeXml(apiTitle)}" tests="${data.totalTests}" failures="${data.failed}" errors="0" time="${totalTime.toFixed(3)}">
+  <testsuite name="${escapeXml(apiTitle)}" tests="${data.totalTests}" failures="${data.failed}" errors="0" skipped="0" time="${totalTime.toFixed(3)}" timestamp="${data.timestamp}" hostname="${escapeXml(hostname)}">
+    <properties>
+      <property name="spec" value="${escapeXml(data.specPath)}"/>
+      <property name="baseUrl" value="${escapeXml(data.baseUrl)}"/>
+      <property name="timestamp" value="${data.timestamp}"/>
+    </properties>
+${testCases}
+    <system-out><![CDATA[
+OpenAPI CLI Test Results
+API: ${apiTitle}
+Base URL: ${data.baseUrl}
+Spec: ${data.specPath}
+Total Tests: ${data.totalTests}
+Passed: ${data.passed}
+Failed: ${data.failed}
+    ]]></system-out>
+  </testsuite>
+</testsuites>`;
 }
 
 /**

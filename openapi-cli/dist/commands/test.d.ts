@@ -1,6 +1,7 @@
 interface TestOptions {
     export?: string;
     exportHtml?: string;
+    exportJunit?: string;
     verbose?: boolean;
     timeout?: string;
     authBearer?: string;
