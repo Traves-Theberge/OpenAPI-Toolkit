@@ -34,6 +34,7 @@ interface TestOptions {
   methods?: string;
   quiet?: boolean;
   paths?: string;
+  parallel?: string;
 }
 
 export async function runTests(specPath: string, baseUrl: string, options: TestOptions = {}): Promise<void> {
@@ -60,7 +61,18 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
   // Parse path pattern filter (supports * wildcard)
   const pathPattern = options.paths ? options.paths.trim() : null;
 
-  // For each path and method, test the endpoint
+  // Parse parallel option
+  const parallelLimit = options.parallel ? parseInt(options.parallel, 10) : 1;
+  const isParallel = parallelLimit > 1;
+
+  // Collect all test tasks
+  interface TestTask {
+    pathStr: string;
+    method: string;
+    operation: any;
+  }
+  const testTasks: TestTask[] = [];
+
   for (const [pathStr, methods] of Object.entries(spec.paths)) {
     // Skip if path filter is active and this path doesn't match
     if (pathPattern && !matchesPattern(pathStr, pathPattern)) {
@@ -74,25 +86,57 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
         if (allowedMethods && !allowedMethods.includes(methodUpper)) {
           continue;
         }
-        const result = await testEndpoint(baseUrl, pathStr, method.toUpperCase(), operation, options.verbose, timeoutMs, options);
-        results.push(result);
+        testTasks.push({ pathStr, method: methodUpper, operation });
+      }
+    }
+  }
 
-        if (result.success) {
-          successCount++;
-          if (!options.quiet) {
-            console.log(`\x1b[32m✓\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.status} ${result.message}`);
-            if (options.verbose && result.duration) {
-              console.log(`  \x1b[90mDuration: ${result.duration}ms\x1b[0m`);
-              if (result.responseHeaders) {
-                console.log(`  \x1b[90mResponse Headers: ${JSON.stringify(result.responseHeaders)}\x1b[0m`);
-              }
+  // Execute tests (parallel or sequential)
+  if (isParallel) {
+    // Parallel execution with concurrency limit
+    const testResults = await executeTestsInParallel(testTasks, baseUrl, timeoutMs, options, parallelLimit);
+    results.push(...testResults);
+
+    // Count successes and failures
+    for (const result of testResults) {
+      if (result.success) {
+        successCount++;
+        if (!options.quiet) {
+          console.log(`\x1b[32m✓\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.status} ${result.message}`);
+          if (options.verbose && result.duration) {
+            console.log(`  \x1b[90mDuration: ${result.duration}ms\x1b[0m`);
+            if (result.responseHeaders) {
+              console.log(`  \x1b[90mResponse Headers: ${JSON.stringify(result.responseHeaders)}\x1b[0m`);
             }
           }
-        } else {
-          failureCount++;
-          // Always show errors even in quiet mode
-          console.log(`\x1b[31m✗\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.message}`);
         }
+      } else {
+        failureCount++;
+        // Always show errors even in quiet mode
+        console.log(`\x1b[31m✗\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.message}`);
+      }
+    }
+  } else {
+    // Sequential execution (original behavior)
+    for (const task of testTasks) {
+      const result = await testEndpoint(baseUrl, task.pathStr, task.method, task.operation, options.verbose, timeoutMs, options);
+      results.push(result);
+
+      if (result.success) {
+        successCount++;
+        if (!options.quiet) {
+          console.log(`\x1b[32m✓\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.status} ${result.message}`);
+          if (options.verbose && result.duration) {
+            console.log(`  \x1b[90mDuration: ${result.duration}ms\x1b[0m`);
+            if (result.responseHeaders) {
+              console.log(`  \x1b[90mResponse Headers: ${JSON.stringify(result.responseHeaders)}\x1b[0m`);
+            }
+          }
+        }
+      } else {
+        failureCount++;
+        // Always show errors even in quiet mode
+        console.log(`\x1b[31m✗\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.message}`);
       }
     }
   }
@@ -145,6 +189,49 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
       console.log(`\x1b[32m✓ All tests passed!\x1b[0m\n`);
     }
   }
+}
+
+/**
+ * Execute tests in parallel with concurrency limit
+ */
+async function executeTestsInParallel(
+  tasks: Array<{ pathStr: string; method: string; operation: any }>,
+  baseUrl: string,
+  timeout: number,
+  options: TestOptions,
+  concurrencyLimit: number
+): Promise<TestResult[]> {
+  const results: TestResult[] = [];
+  const executing: Promise<void>[] = [];
+
+  for (const task of tasks) {
+    // Create test promise
+    const testPromise = testEndpoint(
+      baseUrl,
+      task.pathStr,
+      task.method,
+      task.operation,
+      options.verbose || false,
+      timeout,
+      options
+    ).then(result => {
+      results.push(result);
+    });
+
+    executing.push(testPromise);
+
+    // If we've reached the concurrency limit, wait for one to finish
+    if (executing.length >= concurrencyLimit) {
+      await Promise.race(executing);
+      // Remove completed promises
+      executing.splice(0, executing.findIndex(p => p !== testPromise) + 1);
+    }
+  }
+
+  // Wait for all remaining tests to complete
+  await Promise.all(executing);
+
+  return results;
 }
 
 function loadSpec(filePath: string): OpenAPISpec {

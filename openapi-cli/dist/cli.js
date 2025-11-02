@@ -40,6 +40,7 @@ program
     .option('-m, --methods <methods>', 'Filter by HTTP methods (comma-separated, e.g., GET,POST)')
     .option('-q, --quiet', 'Quiet mode - only show errors and final exit code')
     .option('-p, --paths <pattern>', 'Filter by path pattern (supports * wildcard, e.g., /users/*)')
+    .option('--parallel <limit>', 'Run tests in parallel with concurrency limit (default: 5)', '5')
     .action(async (spec, baseUrl, options) => {
     try {
         await (0, test_1.runTests)(spec, baseUrl, options);

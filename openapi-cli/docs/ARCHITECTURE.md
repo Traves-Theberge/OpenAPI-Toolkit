@@ -1,4 +1,4 @@
-# OpenAPI CLI Architecture
+# OpenAPI Toolkit - CLI Architecture
 
 ## Overview
 
