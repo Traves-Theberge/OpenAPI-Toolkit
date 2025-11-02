@@ -32,6 +32,25 @@ func TestGetConfigPath(t *testing.T) {
 
 // TestLoadConfig_NoFile tests loading when no config file exists
 func TestLoadConfig_NoFile(t *testing.T) {
+	// Backup existing config if it exists
+	configPath, err := GetConfigPath()
+	if err != nil {
+		t.Fatalf("GetConfigPath() failed: %v", err)
+	}
+	
+	// Backup the file if it exists
+	existingData, err := os.ReadFile(configPath)
+	hadExisting := err == nil
+	
+	// Remove config file for this test
+	os.Remove(configPath)
+	defer func() {
+		// Restore the config after test
+		if hadExisting {
+			os.WriteFile(configPath, existingData, 0644)
+		}
+	}()
+	
 	// This should not fail even if file doesn't exist
 	cfg := LoadConfig()
 
