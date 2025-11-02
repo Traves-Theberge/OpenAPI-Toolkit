@@ -533,7 +533,10 @@ Perfect for CI/CD workflows!
 ```
 📁 Total Lines of Code:  ~5,000+ (CLI: 1,500+, TUI: 1,978 main + 3,500+ tests)
 🧪 Test Coverage:        CLI: ~85% (3 tests), TUI: 100% core (409 tests)
-📝 Documentation Pages:  8 (README + ARCHITECTURE + PROGRESS + TESTING per project)
+📝 Documentation Pages:  11 docs (~8,000+ lines total)
+                         CLI: 5 docs (README + USER-GUIDE + ARCHITECTURE + PROGRESS + TESTING)
+                         TUI: 5 docs (README + USER-GUIDE + ARCHITECTURE + PROGRESS + TESTING)
+                         Root: 1 doc (README)
 🔧 HTTP Methods:         7 (CLI), 5 (TUI)
 ⚡ Performance:          <2s for 15 endpoints, 30%+ faster with parallel mode
 🎨 UI Components:        8 packages (TUI: config, errors, export, testing, validation, models, ui, main)
