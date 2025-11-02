@@ -17,6 +17,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -27,6 +29,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/getkin/kin-openapi/openapi3"
+	"gopkg.in/yaml.v3"
 )
 
 // screen represents the different UI states/screens in the application
@@ -108,6 +111,29 @@ type authConfig struct {
 	apiKeyName string // Header/query parameter name for API key
 	username string // For basic auth
 	password string // For basic auth
+}
+
+// config represents the application configuration that persists between sessions
+type config struct {
+	BaseURL     string      `yaml:"baseURL"`     // Default base URL for API testing
+	SpecPath    string      `yaml:"specPath"`    // Default OpenAPI spec file path
+	VerboseMode bool        `yaml:"verboseMode"` // Default verbose logging state
+	Auth        *authConfig `yaml:"auth,omitempty"` // Optional authentication configuration
+}
+
+// configFile represents the on-disk configuration structure
+type configFile struct {
+	BaseURL     string `yaml:"baseURL"`
+	SpecPath    string `yaml:"specPath"`
+	VerboseMode bool   `yaml:"verboseMode"`
+	Auth        *struct {
+		Type       string `yaml:"type"`
+		Token      string `yaml:"token,omitempty"`
+		APIKeyIn   string `yaml:"apiKeyIn,omitempty"`
+		APIKeyName string `yaml:"apiKeyName,omitempty"`
+		Username   string `yaml:"username,omitempty"`
+		Password   string `yaml:"password,omitempty"`
+	} `yaml:"auth,omitempty"`
 }
 
 // enhancedError provides detailed error information with actionable suggestions
@@ -325,6 +351,106 @@ func enhanceValidationError(err error) error {
 	return err
 }
 
+// getConfigPath returns the path to the configuration file
+// Uses ~/.config/openapi-tui/config.yaml on Unix-like systems
+// Uses %APPDATA%\openapi-tui\config.yaml on Windows
+func getConfigPath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	
+	configDir := filepath.Join(homeDir, ".config", "openapi-tui")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return "", err
+	}
+	
+	return filepath.Join(configDir, "config.yaml"), nil
+}
+
+// loadConfig loads configuration from the config file
+// Returns default config if file doesn't exist
+func loadConfig() config {
+	cfg := config{
+		VerboseMode: false,
+	}
+	
+	configPath, err := getConfigPath()
+	if err != nil {
+		return cfg
+	}
+	
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		// File doesn't exist or can't be read - return defaults
+		return cfg
+	}
+	
+	var fileConfig configFile
+	if err := yaml.Unmarshal(data, &fileConfig); err != nil {
+		// Invalid YAML - return defaults
+		return cfg
+	}
+	
+	// Convert fileConfig to config
+	cfg.BaseURL = fileConfig.BaseURL
+	cfg.SpecPath = fileConfig.SpecPath
+	cfg.VerboseMode = fileConfig.VerboseMode
+	
+	if fileConfig.Auth != nil {
+		cfg.Auth = &authConfig{
+			authType:   fileConfig.Auth.Type,
+			token:      fileConfig.Auth.Token,
+			apiKeyIn:   fileConfig.Auth.APIKeyIn,
+			apiKeyName: fileConfig.Auth.APIKeyName,
+			username:   fileConfig.Auth.Username,
+			password:   fileConfig.Auth.Password,
+		}
+	}
+	
+	return cfg
+}
+
+// saveConfig saves the current configuration to the config file
+func saveConfig(cfg config) error {
+	configPath, err := getConfigPath()
+	if err != nil {
+		return err
+	}
+	
+	// Convert config to fileConfig
+	fileConfig := configFile{
+		BaseURL:     cfg.BaseURL,
+		SpecPath:    cfg.SpecPath,
+		VerboseMode: cfg.VerboseMode,
+	}
+	
+	if cfg.Auth != nil {
+		fileConfig.Auth = &struct {
+			Type       string `yaml:"type"`
+			Token      string `yaml:"token,omitempty"`
+			APIKeyIn   string `yaml:"apiKeyIn,omitempty"`
+			APIKeyName string `yaml:"apiKeyName,omitempty"`
+			Username   string `yaml:"username,omitempty"`
+			Password   string `yaml:"password,omitempty"`
+		}{
+			Type:       cfg.Auth.authType,
+			Token:      cfg.Auth.token,
+			APIKeyIn:   cfg.Auth.apiKeyIn,
+			APIKeyName: cfg.Auth.apiKeyName,
+			Username:   cfg.Auth.username,
+			Password:   cfg.Auth.password,
+		}
+	}
+	
+	data, err := yaml.Marshal(fileConfig)
+	if err != nil {
+		return err
+	}
+	
+	return os.WriteFile(configPath, data, 0644)
+}
+
 // model is the main application state, containing all sub-models and UI state
 type model struct {
 	cursor       int           // Currently selected menu item (0-3)
@@ -333,20 +459,36 @@ type model struct {
 	width        int           // Terminal width (updated via WindowSizeMsg)
 	height       int           // Terminal height (updated via WindowSizeMsg)
 	verboseMode  bool          // Whether verbose logging is enabled
+	config       config        // Application configuration
 	validateModel validateModel // Embedded validation model
 	testModel     testModel     // Embedded testing model
 }
 
 func initialModel() model {
-	// Initialize the main application model with default values
-	return model{
+	// Load configuration from file
+	cfg := loadConfig()
+	
+	// Initialize the main application model with default values and loaded config
+	m := model{
 		cursor:         0,                    // Start cursor at first menu item
 		screen:         menuScreen,           // Begin with main menu
 		width:          80,                   // Default terminal width
 		height:         24,                   // Default terminal height
+		verboseMode:    cfg.VerboseMode,      // Load verbose mode from config
+		config:         cfg,                  // Store config
 		validateModel:  initialValidateModel(), // Initialize validation sub-model
 		testModel:      initialTestModel(),     // Initialize testing sub-model
 	}
+	
+	// Pre-fill spec path and base URL if saved in config
+	if cfg.SpecPath != "" {
+		m.testModel.specInput.SetValue(cfg.SpecPath)
+	}
+	if cfg.BaseURL != "" {
+		m.testModel.urlInput.SetValue(cfg.BaseURL)
+	}
+	
+	return m
 }
 
 // Init returns the initial command to run when the program starts
@@ -405,8 +547,10 @@ func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.screen = helpScreen
 		return m, nil
 	case "v":
-		// Toggle verbose mode
+		// Toggle verbose mode and save to config
 		m.verboseMode = !m.verboseMode
+		m.config.VerboseMode = m.verboseMode
+		saveConfig(m.config) // Save configuration change
 		return m, nil
 	case "enter":
 		// Select current menu item
@@ -519,6 +663,12 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.testModel.err = fmt.Errorf("base URL cannot be empty")
 					return m, nil
 				}
+				
+				// Save spec path and base URL to config for next session
+				m.config.SpecPath = m.testModel.specInput.Value()
+				m.config.BaseURL = m.testModel.urlInput.Value()
+				saveConfig(m.config)
+				
 				m.testModel.step = 2
 				m.testModel.testing = true
 				// Start async testing command
@@ -624,10 +774,18 @@ func (m model) viewMenu() string {
 
 	menu := lipgloss.JoinVertical(lipgloss.Left, menuItems...)
 
-	// Verbose mode indicator
-	verboseStatus := ""
+	// Status indicators
+	var statusIndicators []string
 	if m.verboseMode {
-		verboseStatus = " • 🔍 Verbose: ON"
+		statusIndicators = append(statusIndicators, "🔍 Verbose: ON")
+	}
+	if m.config.BaseURL != "" || m.config.SpecPath != "" {
+		statusIndicators = append(statusIndicators, "💾 Config loaded")
+	}
+	
+	verboseStatus := ""
+	if len(statusIndicators) > 0 {
+		verboseStatus = " • " + strings.Join(statusIndicators, " • ")
 	}
 
 	// Status bar with navigation hints
