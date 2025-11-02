@@ -167,11 +167,39 @@ All Tests:       PASSING ✅
 - Custom request editing
 - And 11+ more features!
 
+## Phase 2: Developer Experience (2 of 15 In Progress) 🚀
+
+### ✅ Completed Features (Phase 2)
+
+#### 1. Enhanced Error Messages
+- **Status**: Complete ✅
+- **Implementation**:
+  - `enhancedError` type with title, description, suggestions
+  - `formatEnhancedError()` for styled error display
+  - `enhanceFileError()` - file errors (not found, permissions, parse)
+  - `enhanceNetworkError()` - network errors (timeout, DNS, TLS, connection)
+  - `enhanceValidationError()` - OpenAPI validation errors
+- **Impact**: Users now get actionable guidance instead of cryptic error messages
+- **Examples**:
+  - "File Not Found" → suggests checking path, using absolute paths, verifying permissions
+  - "Connection Refused" → suggests checking if server is running, verifying URL/port, firewall
+  - "Request Timeout" → suggests checking internet, server load, URL correctness
+
+#### 2. Verbose/Debug Logging
+- **Status**: Complete ✅  
+- **Implementation**:
+  - `logEntry` type captures request/response details
+  - Toggle verbose mode with 'v' key (shown in status bar)
+  - Captures request headers, body, response headers, body, duration
+  - Request timing for all API calls
+- **Impact**: Developers can now see full HTTP transaction details for debugging
+- **Next**: Display detailed logs in results view (UI enhancement pending)
+
 ## Summary
 
 **Phase 1 Status**: ✅ COMPLETE (5/5 features - 100%)
-**Phase 2 Status**: 🚀 IN PROGRESS (1/15 features - 7%)
-**Test Coverage**: 38.1% (from 0%, steadily climbing!)
+**Phase 2 Status**: 🚀 IN PROGRESS (2/15 features - 13%)
+**Test Coverage**: 36.9% (from 0%, all tests passing!)
 **Build Status**: ✅ All tests passing, binary builds successfully
 **Documentation**: ✅ README, ARCHITECTURE, and PROGRESS fully updated
 
