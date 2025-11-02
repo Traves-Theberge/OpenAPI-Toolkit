@@ -29,6 +29,8 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **Configuration File Support** - Store default options in YAML or JSON config files (--config)
 - **Response Schema Validation** - Validate API responses against OpenAPI schemas (--validate-schema)
 - **Retry Logic** - Automatically retry failed requests with exponential backoff (--retry)
+- **Watch Mode** - Automatically re-run tests when spec file changes (--watch)
+- **Progress Indicator** - Shows test progress during execution
 
 ## Installation
 
@@ -1265,6 +1267,151 @@ Retries add time when failures occur:
 - Retries are per-request, not per-test
 - Works with parallel execution (`--parallel`)
 - Compatible with all other options
+
+### Watch Mode
+
+Automatically re-run tests when the OpenAPI spec file changes, perfect for development workflows.
+
+**Basic Usage:**
+```bash
+# Watch mode
+openapi-test test spec.yaml https://api.example.com --watch
+
+# Short form
+openapi-test test spec.yaml https://api.example.com -w
+
+# Combine with other options
+openapi-test test spec.yaml https://api.example.com \
+  --watch \
+  --validate-schema \
+  --verbose
+```
+
+**How It Works:**
+
+The CLI monitors the spec file for changes and automatically re-runs tests when changes are detected:
+
+1. Runs tests initially
+2. Watches spec file for changes
+3. Re-runs tests on any file change
+4. Continues watching until you press Ctrl+C
+5. Shows change notification before re-running
+
+**Output:**
+```bash
+👁  Watching /path/to/spec.yaml for changes...
+
+Press Ctrl+C to stop
+
+🧪 Testing API: My API
+📍 Base URL: https://api.example.com
+
+ℹ Running 10 tests...
+
+✓ GET     /users                                   - 200 OK
+...
+
+🔄 File changed, re-running tests...
+
+🧪 Testing API: My API
+...
+```
+
+**Use Cases:**
+
+- **Development**: Test API changes in real-time during development
+- **TDD Workflow**: Test-driven development with immediate feedback
+- **Spec Editing**: Validate spec changes as you write them
+- **Debugging**: Quickly iterate on API fixes
+- **Documentation**: Keep tests running while updating OpenAPI docs
+
+**Notes:**
+
+- Watch mode runs indefinitely until stopped (Ctrl+C)
+- File changes are debounced (no duplicate runs)
+- Works with all other options (filters, auth, validation, etc.)
+- Shows clear indicators for file changes
+- Exits gracefully on Ctrl+C
+- Not recommended for CI/CD (use normal mode)
+
+**Best Practices:**
+
+1. **Local Development Only**: Don't use in production or CI/CD
+2. **Combine with Verbose**: Use `--verbose` to see detailed changes
+3. **Filter Tests**: Use `--methods` or `--paths` to run subset of tests
+4. **Fast Iteration**: Great for rapid development cycles
+5. **Clear Terminal**: Watch mode output can be long, clear terminal periodically
+
+### Progress Indicator
+
+Shows test progress during execution for better visibility with large test suites.
+
+**Features:**
+
+**1. Test Count Display:**
+Shows total number of tests before execution:
+```bash
+ℹ Running 25 tests...
+```
+
+**2. Progress Counter (Sequential Mode):**
+Shows current test number during sequential execution:
+```bash
+[1/25] ✓ GET     /users                               - 200 OK
+[2/25] ✓ POST    /users                               - 201 OK
+[3/25] ✓ GET     /posts                               - 200 OK
+...
+```
+
+**When Progress Counter Appears:**
+- Sequential mode (`--parallel 1` or default)
+- Only for test suites with more than 3 tests
+- Disabled in quiet mode (`--quiet`)
+
+**Output Modes:**
+
+**Normal Mode (< 3 tests):**
+```bash
+ℹ Running 2 tests...
+
+✓ GET     /users                                   - 200 OK
+✓ POST    /users                                   - 201 OK
+```
+
+**Sequential Mode (> 3 tests):**
+```bash
+ℹ Running 10 tests...
+
+[1/10] ✓ GET     /users                               - 200 OK
+[2/10] ✓ POST    /users                               - 201 OK
+[3/10] ✓ GET     /posts                               - 200 OK
+...
+```
+
+**Parallel Mode:**
+```bash
+ℹ Running 50 tests...
+
+✓ GET     /users                                   - 200 OK
+✓ GET     /posts                                   - 200 OK
+✓ GET     /comments                                - 200 OK
+...
+```
+
+**Benefits:**
+
+- **Visibility**: See how many tests are running
+- **Progress Tracking**: Know how far along the test run is
+- **Large Suites**: Especially useful for 50+ endpoint specs
+- **ETA Estimation**: Mentally estimate completion time
+- **Better UX**: More professional appearance
+
+**Notes:**
+
+- Progress counter only shows in sequential mode
+- Parallel mode shows count but not individual progress
+- Quiet mode disables all progress indicators
+- No performance overhead
 
 ### Error Handling
 

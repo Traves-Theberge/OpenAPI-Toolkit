@@ -97,6 +97,12 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
     }
   }
 
+  // Show total test count
+  const totalTests = testTasks.length;
+  if (!options.quiet && totalTests > 0) {
+    console.log(`\x1b[36mℹ\x1b[0m Running ${totalTests} test${totalTests === 1 ? '' : 's'}...\n`);
+  }
+
   // Execute tests (parallel or sequential)
   if (isParallel) {
     // Parallel execution with concurrency limit
@@ -130,13 +136,25 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
     }
   } else {
     // Sequential execution (original behavior)
+    let currentTest = 0;
     for (const task of testTasks) {
+      currentTest++;
+
+      // Show progress indicator for sequential tests (if not quiet and more than 3 tests)
+      if (!options.quiet && totalTests > 3) {
+        process.stdout.write(`\x1b[90m[${currentTest}/${totalTests}]\x1b[0m `);
+      }
+
       const result = await testEndpoint(baseUrl, task.pathStr, task.method, task.operation, options.verbose, timeoutMs, options);
       results.push(result);
 
       if (result.success) {
         successCount++;
         if (!options.quiet) {
+          // Clear progress indicator and show result on same line
+          if (totalTests > 3) {
+            process.stdout.write('\r');
+          }
           console.log(`\x1b[32m✓\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.status} ${result.message}`);
           if (options.verbose && result.duration) {
             console.log(`  \x1b[90mDuration: ${result.duration}ms\x1b[0m`);
@@ -147,6 +165,10 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
         }
       } else {
         failureCount++;
+        // Clear progress indicator and show error
+        if (!options.quiet && totalTests > 3) {
+          process.stdout.write('\r');
+        }
         // Always show errors even in quiet mode
         console.log(`\x1b[31m✗\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.message}`);
         // Show schema errors if present

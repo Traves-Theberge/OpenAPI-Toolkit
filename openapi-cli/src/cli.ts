@@ -4,6 +4,8 @@ import { Command } from 'commander';
 import { validateSpec } from './commands/validate';
 import { runTests } from './commands/test';
 import { loadConfig, findConfig, mergeOptions } from './config';
+import * as chokidar from 'chokidar';
+import * as path from 'path';
 
 const program = new Command();
 
@@ -49,6 +51,7 @@ program
   .option('--parallel <limit>', 'Run tests in parallel with concurrency limit (default: 5)', '5')
   .option('--validate-schema', 'Validate response bodies against OpenAPI schemas')
   .option('-r, --retry <count>', 'Retry failed requests with exponential backoff (default: 0)', '0')
+  .option('-w, --watch', 'Watch spec file for changes and re-run tests')
   .action(async (spec: string, baseUrl: string, options: {
     config?: string;
     export?: string;
@@ -68,6 +71,7 @@ program
     parallel?: string;
     validateSchema?: boolean;
     retry?: string;
+    watch?: boolean;
   }) => {
     try {
       // Load config file if specified or search for one
@@ -87,8 +91,53 @@ program
       // Merge config with CLI options (CLI options take precedence)
       const mergedOptions = mergeOptions(options, config);
 
-      await runTests(spec, baseUrl, mergedOptions);
-      console.log('All tests passed.');
+      // Watch mode
+      if (options.watch) {
+        const specPath = path.resolve(spec);
+        console.log(`\x1b[36m👁\x1b[0m  Watching ${specPath} for changes...\n`);
+        console.log(`\x1b[90mPress Ctrl+C to stop\x1b[0m\n`);
+
+        // Run tests initially
+        try {
+          await runTests(spec, baseUrl, mergedOptions);
+          console.log('All tests passed.');
+        } catch (error) {
+          console.error('Tests failed:', error instanceof Error ? error.message : String(error));
+          // Don't exit in watch mode, just show error
+        }
+
+        // Watch for changes
+        const watcher = chokidar.watch(specPath, {
+          persistent: true,
+          ignoreInitial: true,
+        });
+
+        watcher.on('change', async () => {
+          console.log(`\n\x1b[36m🔄 File changed, re-running tests...\x1b[0m\n`);
+          try {
+            await runTests(spec, baseUrl, mergedOptions);
+            console.log('All tests passed.');
+          } catch (error) {
+            console.error('Tests failed:', error instanceof Error ? error.message : String(error));
+            // Don't exit in watch mode, just show error
+          }
+        });
+
+        watcher.on('error', (error) => {
+          console.error('Watcher error:', error);
+        });
+
+        // Keep process alive
+        process.on('SIGINT', () => {
+          console.log('\n\x1b[36m👋 Stopping watch mode...\x1b[0m');
+          watcher.close();
+          process.exit(0);
+        });
+      } else {
+        // Normal mode (run once)
+        await runTests(spec, baseUrl, mergedOptions);
+        console.log('All tests passed.');
+      }
     } catch (error) {
       console.error('Tests failed:', error instanceof Error ? error.message : String(error));
       process.exit(1);
