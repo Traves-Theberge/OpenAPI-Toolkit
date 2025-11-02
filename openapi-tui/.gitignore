@@ -1,0 +1,40 @@
+# Binaries
+openapi-tui
+openapi-cli-tui
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+*.out
+
+# Go workspace file
+go.work
+
+# Coverage files
+*.coverprofile
+coverage.txt
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*.old
+
+# Config files (may contain sensitive data)
+config.yaml
+.env
