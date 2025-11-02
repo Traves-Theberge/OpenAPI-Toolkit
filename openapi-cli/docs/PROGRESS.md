@@ -1,8 +1,8 @@
 # OpenAPI CLI Development Progress
 
-## Project Status: Phase 2 Complete ✅
+## Project Status: Phase 3 - 73% Complete (11/15 Features) 🚀
 
-The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows.
+The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows with advanced features including parallel execution, schema-based testing, multiple export formats, and configuration file support.
 
 ---
 
@@ -339,29 +339,40 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 - **Testing**: Tested with success/failure scenarios, verified XML structure, all tests pass
 - **Documentation**: Comprehensive README with CI/CD examples (Jenkins, GitHub Actions, GitLab CI)
 
+#### 11. Configuration File Support
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - `-c` / `--config <file>` flag for explicit config file path
+  - Automatic config file discovery (searches current dir and parent dirs)
+  - Supported file names: `.openapi-cli.yaml`, `.openapi-cli.yml`, `.openapi-cli.json`, `openapi-cli.yaml`, etc.
+  - Both YAML and JSON formats supported
+  - All CLI options configurable: auth, headers, timeout, verbose, quiet, methods, paths, parallel, export options
+  - CLI options take precedence over config file options
+  - Header merging: headers from config and CLI are combined
+  - Config key normalization: `auth-bearer`, `authBearer`, `auth_bearer` all work
+  - Helpful error messages for missing or invalid config files
+- **Files**: `src/config.ts` (new file), `src/cli.ts` (lines 6, 34, 51, 68-84)
+- **Functions**: `loadConfig()`, `findConfig()`, `mergeOptions()`, `normalizeConfig()`
+- **Use Cases**: Project defaults, environment configs, team sharing, CI/CD separation, multiple APIs
+- **Testing**: Tested YAML config, JSON config, automatic discovery, explicit path, option precedence, header merging, error handling, unit tests pass
+- **Documentation**: Comprehensive README section with examples, use cases, and config file templates
+- **Example Files**: `.openapi-cli.example.yaml` with all options documented
+
 ---
 
-### 🚀 Planned Features (5 remaining)
-
-#### High Priority
-
-1. **Configuration File Support** ⭐⭐
-   - `.openapi-cli.yaml` in project root or home
-   - Store default options (timeout, export format, etc.)
-   - Override with CLI flags
-   - **Complexity**: Medium
-   - **Impact**: Medium
+### 🚀 Planned Features (4 remaining)
 
 #### Medium Priority
 
-2. **Response Schema Validation** ⭐⭐
+1. **Response Schema Validation** ⭐⭐
    - Validate response bodies against schema
    - Report schema mismatches
    - Detailed validation errors
    - **Complexity**: High (requires OpenAPI parser)
    - **Impact**: High
 
-8. **Retry Logic** ⭐
+2. **Retry Logic** ⭐
    - `--retry <count>` flag
    - Exponential backoff
    - Only retry on network errors (not 4xx/5xx)
@@ -370,14 +381,14 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 #### Low Priority
 
-9. **Watch Mode** ⭐
+3. **Watch Mode** ⭐
     - `--watch` flag
     - Re-run on spec file changes
     - Development workflow
     - **Complexity**: Medium
     - **Impact**: Low
 
-10. **Progress Bar** ⭐
+4. **Progress Bar** ⭐
     - Show progress during long test runs
     - "Testing 5/50 endpoints..."
     - Spinner animation

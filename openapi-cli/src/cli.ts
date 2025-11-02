@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import { validateSpec } from './commands/validate';
 import { runTests } from './commands/test';
+import { loadConfig, findConfig, mergeOptions } from './config';
 
 const program = new Command();
 
@@ -30,6 +31,7 @@ program
   .description('Run API tests against an OpenAPI spec')
   .argument('<spec>', 'Path to the OpenAPI spec file')
   .argument('<baseUrl>', 'Base URL of the API to test')
+  .option('-c, --config <file>', 'Path to config file (YAML or JSON)')
   .option('-e, --export <file>', 'Export results to JSON file')
   .option('--export-html <file>', 'Export results to HTML file')
   .option('--export-junit <file>', 'Export results to JUnit XML file')
@@ -46,6 +48,7 @@ program
   .option('-p, --paths <pattern>', 'Filter by path pattern (supports * wildcard, e.g., /users/*)')
   .option('--parallel <limit>', 'Run tests in parallel with concurrency limit (default: 5)', '5')
   .action(async (spec: string, baseUrl: string, options: {
+    config?: string;
     export?: string;
     exportHtml?: string;
     exportJunit?: string;
@@ -63,7 +66,24 @@ program
     parallel?: string;
   }) => {
     try {
-      await runTests(spec, baseUrl, options);
+      // Load config file if specified or search for one
+      let config = {};
+      if (options.config) {
+        config = loadConfig(options.config);
+      } else {
+        const configPath = findConfig();
+        if (configPath) {
+          config = loadConfig(configPath);
+          if (!options.quiet) {
+            console.log(`Using config file: ${configPath}`);
+          }
+        }
+      }
+
+      // Merge config with CLI options (CLI options take precedence)
+      const mergedOptions = mergeOptions(options, config);
+
+      await runTests(spec, baseUrl, mergedOptions);
       console.log('All tests passed.');
     } catch (error) {
       console.error('Tests failed:', error instanceof Error ? error.message : String(error));

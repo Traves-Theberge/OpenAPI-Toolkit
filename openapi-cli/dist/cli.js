@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
 const validate_1 = require("./commands/validate");
 const test_1 = require("./commands/test");
+const config_1 = require("./config");
 const program = new commander_1.Command();
 program
     .name('openapi-test')
@@ -28,6 +29,7 @@ program
     .description('Run API tests against an OpenAPI spec')
     .argument('<spec>', 'Path to the OpenAPI spec file')
     .argument('<baseUrl>', 'Base URL of the API to test')
+    .option('-c, --config <file>', 'Path to config file (YAML or JSON)')
     .option('-e, --export <file>', 'Export results to JSON file')
     .option('--export-html <file>', 'Export results to HTML file')
     .option('--export-junit <file>', 'Export results to JUnit XML file')
@@ -45,7 +47,23 @@ program
     .option('--parallel <limit>', 'Run tests in parallel with concurrency limit (default: 5)', '5')
     .action(async (spec, baseUrl, options) => {
     try {
-        await (0, test_1.runTests)(spec, baseUrl, options);
+        // Load config file if specified or search for one
+        let config = {};
+        if (options.config) {
+            config = (0, config_1.loadConfig)(options.config);
+        }
+        else {
+            const configPath = (0, config_1.findConfig)();
+            if (configPath) {
+                config = (0, config_1.loadConfig)(configPath);
+                if (!options.quiet) {
+                    console.log(`Using config file: ${configPath}`);
+                }
+            }
+        }
+        // Merge config with CLI options (CLI options take precedence)
+        const mergedOptions = (0, config_1.mergeOptions)(options, config);
+        await (0, test_1.runTests)(spec, baseUrl, mergedOptions);
         console.log('All tests passed.');
     }
     catch (error) {

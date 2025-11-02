@@ -1,0 +1,31 @@
+# Example OpenAPI CLI Configuration File
+# Copy this file to .openapi-cli.yaml and customize for your project
+
+# Authentication (choose one)
+# auth-bearer: "your-jwt-token-here"
+# auth-api-key: "your-api-key-here"
+# auth-header: "X-API-Key"  # Header name for API key (default: X-API-Key)
+# auth-query: "api_key"     # Query parameter for API key
+# auth-basic: "username:password"
+
+# Custom headers (repeatable)
+headers:
+  - "User-Agent: OpenAPI-CLI/1.0"
+  - "Accept: application/json"
+
+# Request options
+timeout: 10000    # Request timeout in milliseconds
+verbose: false    # Show verbose output with request/response details
+quiet: false      # Quiet mode - only show errors and final exit code
+
+# Filtering
+# methods: "GET,POST"           # Filter by HTTP methods (comma-separated)
+# paths: "/api/v1/*"            # Filter by path pattern (supports * wildcard)
+
+# Execution
+parallel: 5       # Run tests in parallel with concurrency limit
+
+# Export options
+# export: "results.json"        # Export results to JSON file
+# export-html: "report.html"    # Export results to HTML file
+# export-junit: "junit.xml"     # Export results to JUnit XML file

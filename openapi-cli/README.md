@@ -26,6 +26,7 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **Schema-Based Body Generation** - Automatically generate request bodies from JSON Schema definitions
 - **HTML Export** - Generate beautiful, styled HTML reports for test results (--export-html)
 - **JUnit XML Export** - Generate JUnit XML reports for CI/CD integration (--export-junit)
+- **Configuration File Support** - Store default options in YAML or JSON config files (--config)
 
 ## Installation
 
@@ -939,6 +940,119 @@ requestBody:
         body: "Test content"
 ```
 
+### Configuration File Support
+
+Store default options in a configuration file instead of passing them via command-line every time. Supports both YAML and JSON formats.
+
+**Automatic Discovery:**
+
+The CLI automatically searches for config files in the current directory and parent directories:
+- `.openapi-cli.yaml`
+- `.openapi-cli.yml`
+- `.openapi-cli.json`
+- `openapi-cli.yaml`
+- `openapi-cli.yml`
+- `openapi-cli.json`
+
+**Explicit Config File:**
+```bash
+# Use specific config file
+openapi-test test spec.yaml https://api.example.com --config my-config.yaml
+```
+
+**Example YAML Config:**
+```yaml
+# .openapi-cli.yaml
+# Authentication
+auth-bearer: "your-jwt-token-here"
+
+# Custom headers
+headers:
+  - "User-Agent: My-App/1.0"
+  - "Accept: application/json"
+
+# Request options
+timeout: 15000
+verbose: true
+quiet: false
+
+# Filtering
+methods: "GET,POST,PUT"
+paths: "/api/v1/*"
+
+# Execution
+parallel: 10
+
+# Export
+export: "results.json"
+export-html: "report.html"
+export-junit: "junit.xml"
+```
+
+**Example JSON Config:**
+```json
+{
+  "auth-bearer": "your-jwt-token",
+  "headers": [
+    "User-Agent: My-App/1.0",
+    "Accept: application/json"
+  ],
+  "timeout": 15000,
+  "verbose": true,
+  "parallel": 10,
+  "export-html": "report.html"
+}
+```
+
+**Supported Options:**
+
+All command-line options can be configured in the config file:
+- Authentication: `auth-bearer`, `auth-api-key`, `auth-header`, `auth-query`, `auth-basic`
+- Headers: `headers` (array of strings)
+- Request: `timeout`, `verbose`, `quiet`
+- Filtering: `methods`, `paths`
+- Execution: `parallel`
+- Export: `export`, `export-html`, `export-junit`
+
+**Option Precedence:**
+
+CLI options always take precedence over config file options:
+
+```bash
+# Config file has verbose: false
+# This command will use verbose: true
+openapi-test test spec.yaml https://api.example.com --verbose
+```
+
+**Header Merging:**
+
+Headers from both config file and CLI are merged:
+
+```yaml
+# Config file
+headers:
+  - "User-Agent: My-App"
+```
+
+```bash
+# Both headers will be sent
+openapi-test test spec.yaml https://api.example.com -H "X-Custom: value"
+```
+
+**Use Cases:**
+- **Project Defaults**: Store project-specific settings in `.openapi-cli.yaml`
+- **Environment Configs**: Different configs for dev/staging/prod
+- **Team Sharing**: Commit config to git for consistent team settings
+- **CI/CD**: Separate configs for local dev vs CI/CD pipeline
+- **Multiple APIs**: Different config files for different API endpoints
+
+**Notes:**
+- Config files are optional - all options can still be passed via CLI
+- YAML format supports comments for documentation
+- JSON format is more strict but easier to generate programmatically
+- Config files are searched up the directory tree (like .gitignore)
+- Use `.openapi-cli.yaml` prefix to hide from directory listings
+
 ### Error Handling
 
 The CLI gracefully handles various error conditions:
@@ -946,6 +1060,7 @@ The CLI gracefully handles various error conditions:
 - **ETIMEDOUT** - Request timeout (10s default)
 - **HTTP Errors** - Non-2xx status codes with detailed messages
 - **Parse Errors** - Invalid JSON/YAML with specific error messages
+- **Config Errors** - Invalid or missing config files with helpful messages
 
 ## Examples
 
