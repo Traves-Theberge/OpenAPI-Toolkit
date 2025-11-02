@@ -1,1 +1,1 @@
-{"version":3,"file":"validate.d.ts","sourceRoot":"","sources":["../../src/commands/validate.ts"],"names":[],"mappings":"AAIA,wBAAsB,YAAY,CAAC,QAAQ,EAAE,MAAM,GAAG,OAAO,CAAC,IAAI,CAAC,CAmClE"}
+{"version":3,"file":"validate.d.ts","sourceRoot":"","sources":["../../src/commands/validate.ts"],"names":[],"mappings":"AASA,wBAAsB,YAAY,CAAC,QAAQ,EAAE,MAAM,GAAG,OAAO,CAAC,IAAI,CAAC,CAuJlE"}
