@@ -23,12 +23,18 @@ A modern, polished terminal user interface for validating and testing APIs again
 - 🔍 **Query Parameters** — Auto-generated query strings
 - 🧪 **37.8% Test Coverage** — Comprehensive test suite with 70+ test cases
 
-### Phase 2 — Developer Experience (In Progress 🚀)
+### Phase 2 — Developer Experience (67% Complete 🚀)
 - 💡 **Enhanced Error Messages** — Actionable suggestions for common issues ✅
 - 📊 **Verbose Logging & Display** — Full HTTP details with 'v' toggle, 'l' to view logs ✅
 - 💾 **Configuration Support** — Auto-save/load settings from `~/.config/openapi-tui/config.yaml` ✅
-- 📤 **Export Results** — JSON export for CI/CD integration with 'e' key ✅
-- 📈 **45.9% Test Coverage** — Growing test suite with 18 test functions
+- 📤 **Export Results** — JSON, HTML, and JUnit XML export for CI/CD integration ✅
+- 🏗️ **Standard Go Layout** — Modular architecture with cmd/ and internal/ packages ✅
+- 📊 **Summary Statistics** — Pass rates, timing analysis, performance metrics ✅
+- 🔍 **Response Filtering** — Filter results by status, method, endpoint, or keywords ✅
+- 📄 **HTML Reports** — Professional web reports with embedded CSS and statistics ✅
+- 🤖 **JUnit XML** — CI/CD integration with Jenkins, GitLab CI, GitHub Actions ✅
+- � **Request History** — Track, replay, and analyze test runs over time ✅
+- 🧪 **94 Test Coverage** — Comprehensive test suite with 170+ test runs
 
 ## 🛠️ Installation
 
@@ -70,19 +76,39 @@ openapi-tui
 2. **Test API** 🧪
    - Provide spec file path
    - Enter base URL (e.g., `https://api.example.com`)
-   - Watch automated endpoint testing (requests, validation, auth)
+   - Watch automated endpoint testing with live statistics
    - Press **'v'** to toggle verbose logging (full HTTP details)
+   - Press **'f'** to filter results by status, method, or keywords
    - Press **'l'** on a result to view detailed logs (request/response headers, bodies, timing)
-   - Press **'e'** in results view to export to JSON
+   - Press **'r'** to view test run history and replay previous tests
+   - Press **'e'**, **'h'**, or **'j'** to export results
 
-### Export Results
-After running tests, press **'e'** to export results to JSON:
+### Export & Analysis
+After running tests, export results in multiple formats:
+
+**JSON Export** (press **'e'**):
 - Filename: `openapi-test-results-YYYY-MM-DD-HHMMSS.json`
-- Includes metadata, statistics (passed/failed), and full test details
-- Contains verbose log data when enabled (headers, bodies, timing)
-- Perfect for CI/CD integration and automated result consumption
+- Machine-readable format for CI/CD integration
+- Includes metadata, statistics, and full test details
+- Contains verbose log data when enabled
 
-See `example-export.json` for sample output format.
+**HTML Report** (press **'h'**):
+- Professional web report with embedded CSS
+- Statistics dashboard with visual indicators
+- Color-coded results table
+- Perfect for sharing with stakeholders
+
+**JUnit XML** (press **'j'**):
+- Standard CI/CD format for Jenkins, GitLab CI, GitHub Actions
+- Test suite with proper failure/error distinction
+- Timing data and metadata properties
+- Automated pipeline integration
+
+**Request History** (press **'r'**):
+- View past test runs with timestamps and statistics
+- Replay any previous test with one keystroke
+- Track API health trends over time
+- Persistent storage in `~/.config/openapi-tui/history.json`
 
 ## 🏗️ Architecture
 

@@ -35,6 +35,8 @@ stateDiagram-v2
 
     ValidateScreen --> MenuScreen: Esc or Enter (after validation)
     TestScreen --> MenuScreen: Esc or Enter (after testing)
+    TestScreen --> HistoryScreen: r (from results view)
+    HistoryScreen --> TestScreen: Esc or Enter (replay test)
     HelpScreen --> MenuScreen: q/Esc/h/?
 ```
 
@@ -587,8 +589,56 @@ flowchart TD
 - 70+ test cases, all passing
 - Robust, production-ready testing infrastructure
 
-### Upcoming: Phase 2 - Developer Experience
+### Phase 2 Implementation (10 of 15 Complete) 🚀
 
-- **15 Additional Features** - See project roadmap for Phase 2-4 enhancements
+**Completed Features:**
 
-This architecture provides a robust, maintainable, and user-friendly TUI for OpenAPI testing. The recent enhancements enable realistic API testing with automatically generated request bodies, query parameters, and path parameter substitution. Future phases will add response validation, authentication, error reporting improvements, and advanced features like custom request editing and spec diffing.
+1. **Enhanced Error Messages** ✅ - Actionable suggestions with context-aware guidance
+2. **Verbose Logging** ✅ - Full HTTP transaction details with 'l' key
+3. **Configuration Persistence** ✅ - Auto-save/load from `~/.config/openapi-tui/config.yaml`
+4. **JSON Export** ✅ - CI/CD integration with metadata and statistics
+5. **Standard Go Layout** ✅ - Modular cmd/ and internal/ package structure
+6. **Summary Statistics** ✅ - Pass rates, timing analysis, performance metrics
+7. **Response Filtering** ✅ - Multi-field filtering with special keywords
+8. **HTML Export** ✅ - Professional web reports with embedded CSS
+9. **JUnit XML Export** ✅ - CI/CD pipeline integration (Jenkins, GitLab, GitHub Actions)
+10. **Request History** ✅ - Track, replay, and analyze test runs with persistence
+
+**Architecture Updates:**
+- **Package Structure**: Migrated from monolithic 1,794-line file to modular packages
+  - `cmd/openapi-tui/` - Application entry point
+  - `internal/models/` - Shared type definitions (Screen, Model, TestResult, HistoryEntry)
+  - `internal/config/` - Configuration management
+  - `internal/errors/` - Enhanced error handling
+  - `internal/export/` - JSON, HTML, JUnit XML export
+  - `internal/validation/` - OpenAPI validation
+  - `internal/testing/` - API testing logic
+  - `internal/ui/` - View rendering (stats, filter, history views)
+
+**New Screen: HistoryScreen**
+- Displays table of past test runs
+- Navigation with arrow keys or vim keys (j/k)
+- Select and replay tests with Enter
+- Persistent storage in `~/.config/openapi-tui/history.json`
+- Automatic 50-entry limit (keeps most recent)
+
+**Key Bindings:**
+- `v` - Toggle verbose mode
+- `f` - Filter results
+- `e` - Export JSON
+- `h` - Export HTML
+- `j` - Export JUnit XML
+- `r` - View history
+- `l` - View detailed logs
+
+**Test Coverage:** 94 tests passing (170+ test runs including subtests)
+
+### Remaining Phase 2 Features (5 of 15)
+
+- Parallel test execution
+- Custom request editing
+- Configuration UI
+- Endpoint search
+- Test retries
+
+This architecture provides a robust, maintainable, and production-ready TUI for OpenAPI testing. The modular structure enables easy feature additions and maintenance. Phase 2 enhancements deliver professional-grade developer experience with comprehensive export formats, historical analysis, and CI/CD integration.

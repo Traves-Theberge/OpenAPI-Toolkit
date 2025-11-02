@@ -315,7 +315,61 @@ ls -lh openapi-tui
 
 5. **Press Enter or Esc** to return to menu
 
-## Step 6: Test Help Screen
+## Step 6: Test Phase 2 Features
+
+### Test Verbose Logging (Feature #2)
+1. Run a test (Steps 1-3 from Step 5)
+2. **Press 'v'** to toggle verbose mode (status bar shows "Verbose: ON")
+3. **Press 'l'** on any result to view detailed logs
+4. See full request/response headers, bodies, and timing
+
+### Test Response Filtering (Feature #7)
+1. After running tests, **press 'f'** to activate filter
+2. Type "get" to see only GET requests
+3. Type "200" to see only 200 responses
+4. Type "fail" to see only failures
+5. **Press Esc** to exit filter mode
+
+### Test Summary Statistics (Feature #6)
+1. After running tests, view the statistics box at the top
+2. Check: Total tests, Passed, Failed, Pass Rate, Timing stats
+3. See fastest and slowest endpoints identified
+
+### Test Export Features (Features #4, #8, #9)
+
+**JSON Export:**
+1. After tests, **press 'e'**
+2. Look for: `✅ Exported JSON to openapi-test-results-YYYY-MM-DD-HHMMSS.json`
+3. Open file to verify JSON structure
+
+**HTML Export:**
+1. After tests, **press 'h'**
+2. Look for: `✅ Exported HTML to openapi-test-results_YYYYMMDD_HHMMSS.html`
+3. Open in browser to see professional report
+
+**JUnit XML Export:**
+1. After tests, **press 'j'**
+2. Look for: `✅ Exported JUnit XML to openapi-test-results_YYYYMMDD_HHMMSS.xml`
+3. Verify XML format for CI/CD integration
+
+### Test Request History (Feature #10)
+1. Run several test sessions
+2. From results view, **press 'r'**
+3. See table of past test runs with timestamps
+4. Use **↑/↓** to navigate history
+5. **Press Enter** on any entry to replay that test
+6. **Press Esc** to return to results
+
+Expected history location: `~/.config/openapi-tui/history.json`
+
+### Test Configuration Persistence (Feature #3)
+1. Run a test with spec path and base URL
+2. Exit the application
+3. Restart `./openapi-tui`
+4. Notice spec path and base URL are pre-filled
+5. Config stored in: `~/.config/openapi-tui/config.yaml`
+
+## Step 7: Test Help Screen
 
 1. From main menu, **press h or ?**
 2. View help documentation
@@ -434,6 +488,7 @@ Expected: ~5-10 seconds for 12 endpoints
 
 ## ✅ openapi-cli-tui Tests
 
+### Core Functionality
 - [ ] Builds successfully
 - [ ] Launches TUI without errors
 - [ ] Menu navigation works (arrows/jk)
@@ -444,6 +499,20 @@ Expected: ~5-10 seconds for 12 endpoints
 - [ ] Displays results table
 - [ ] Help screen accessible
 - [ ] Can exit cleanly
+
+### Phase 2 Features (10/15 Complete)
+- [ ] Enhanced error messages show helpful suggestions
+- [ ] Verbose mode toggles with 'v' key
+- [ ] 'l' key shows detailed request/response logs
+- [ ] Configuration persists across sessions
+- [ ] 'e' exports JSON results
+- [ ] 'h' exports HTML report (opens in browser)
+- [ ] 'j' exports JUnit XML for CI/CD
+- [ ] Summary statistics display (pass rate, timing)
+- [ ] 'f' filters results by status/method/keyword
+- [ ] 'r' shows request history
+- [ ] Can replay tests from history with Enter
+- [ ] History persists across sessions (50-entry limit)
 
 ## ✅ Integration Tests
 

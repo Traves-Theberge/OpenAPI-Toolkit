@@ -50,20 +50,23 @@ go build
 | Feature | CLI | TUI | Best For |
 |---------|-----|-----|----------|
 | **Interface** | Command-line | Interactive UI | CLI: Scripts, TUI: Humans |
-| **HTTP Methods** | 7 methods | 5 methods* | CLI: More complete |
+| **HTTP Methods** | 7 methods | 5 methods | CLI: More complete |
 | **Parameters** | Path + Query | Path + Query | Both equal |
 | **Request Bodies** | Examples | Advanced generation | TUI: More sophisticated |
 | **Response Validation** | Status only | Status + Schema | TUI: More thorough |
 | **Output** | Colored text | Styled tables | TUI: More visual |
-| **Summary Stats** | Yes | No* | CLI: Better reporting |
+| **Summary Stats** | Yes | **Yes ✅** | **TUI: Pass rates + timing** |
 | **Authentication** | No | Yes (Bearer/API Key/Basic) | TUI: Fully implemented |
 | **Error Messages** | Basic | Enhanced with suggestions | TUI: More helpful |
 | **Verbose Logging** | No | Yes (toggle with 'v') | TUI: Full HTTP details |
+| **Export Formats** | No | **JSON/HTML/JUnit XML ✅** | **TUI: CI/CD ready** |
+| **Response Filtering** | No | **Yes (status/method/keyword) ✅** | **TUI: Interactive** |
+| **Test History** | No | **Yes (50 runs) ✅** | **TUI: Replay tests** |
+| **Configuration** | No | **Persistent YAML ✅** | **TUI: Auto-save** |
 | **Help System** | Man pages | Built-in screens | TUI: More accessible |
 | **Exit Codes** | Yes (0/1) | N/A | CLI: CI/CD friendly |
-| **Use Case** | Automation | Development | Different workflows |
-
-\* *Features marked for TUI updates to achieve parity*
+| **Use Case** | Automation | Development + CI/CD | Different workflows |
+| **Test Coverage** | 3 tests | **94 tests (170+ runs) ✅** | **TUI: Comprehensive** |
 
 ## 🛠️ Technologies
 
@@ -115,19 +118,34 @@ $ openapi-test test spec.yaml https://jsonplaceholder.typicode.com
 ✓ All tests passed!
 ```
 
-### TUI Screenshot
+### TUI Features (Phase 2 - 67% Complete)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    OpenAPI Specification Tester                 │
+│                  📊 Test Results - 15 endpoints                 │
+├─────────────────────────────────────────────────────────────────┤
+│ Statistics:                                                     │
+│   Total: 15 | Passed: 15 | Failed: 0 | Pass Rate: 100%         │
+│   Timing: Total 2.5s | Avg 167ms | Fastest 95ms | Slowest 312ms│
+├─────────────────────────────────────────────────────────────────┤
+│ Method │ Endpoint        │ Status │ Duration │ Message          │
+│ GET    │ /posts          │ ✅ 200 │ 125ms    │ OK (validated)   │
+│ GET    │ /users          │ ✅ 200 │ 98ms     │ OK (validated)   │
+│ POST   │ /posts          │ ✅ 201 │ 156ms    │ Created          │
+│ ...                                                              │
+├─────────────────────────────────────────────────────────────────┤
+│ Press 'f' filter | 'e' JSON | 'h' HTML | 'j' JUnit XML | 'r' history
+│ Verbose: ON | Config loaded | Enter to return                  │
 └─────────────────────────────────────────────────────────────────┘
 
-  > Validate OpenAPI Spec
-    Test API Endpoints
-    Help
-    Quit
-
-Navigate with ↑/↓ or j/k • Enter to select • q to quit
+✨ New Phase 2 Features:
+  • 📊 Summary Statistics - Pass rates, timing analysis
+  • 🔍 Response Filtering - Filter by status/method/keywords ('f')
+  • 📄 HTML Export - Professional reports ('h')
+  • 🤖 JUnit XML - CI/CD integration ('j')
+  • 📜 Request History - Track & replay tests ('r')
+  • 💾 Config Persistence - Auto-save settings
+  • 📊 Verbose Logging - Full HTTP details ('v', 'l')
 ```
 
 ## ⚡ Supported Features
@@ -151,9 +169,14 @@ Navigate with ↑/↓ or j/k • Enter to select • q to quit
 ### Output & Reporting
 - ✅ **Colored Output:** Green for success, red for errors
 - ✅ **Emoji Indicators:** 🧪 📍 📊 ✓ ✗
-- ✅ **Summary Statistics:** Pass/fail/total counts (CLI)
-- ✅ **Interactive Tables:** Sortable results (TUI)
+- ✅ **Summary Statistics:** Pass rates, timing analysis, performance metrics (TUI)
+- ✅ **Interactive Tables:** Sortable results with filtering (TUI)
 - ✅ **Progress Indicators:** Spinners during async operations (TUI)
+- ✅ **Export Formats:** JSON, HTML, JUnit XML for CI/CD (TUI)
+- ✅ **Response Filtering:** Real-time filtering by status/method/keywords (TUI)
+- ✅ **Request History:** Track and replay previous test runs (TUI)
+- ✅ **Verbose Logging:** Full HTTP request/response details (TUI)
+- ✅ **Configuration Persistence:** Auto-save settings to YAML (TUI)
 
 ## 🔧 Use Cases
 
@@ -242,11 +265,20 @@ npm test
 ### TUI Tests
 ```bash
 cd openapi-tui
-go test -v
+go test ./...
 
 # Output:
-# PASS
-# coverage: 37.8% of statements
+# PASS - 94 tests passing (170+ test runs including subtests)
+# ok      github.com/.../internal/models  0.104s
+# ok      github.com/.../internal/export  0.008s
+# ok      github.com/.../internal/ui      0.003s
+# 
+# Test coverage by package:
+# - history.go: 8 test functions (persistence, limits, replay)
+# - export/junit.go: 20 test cases (XML structure, CI/CD format)
+# - export/html.go: 25 test cases (professional reports)
+# - ui/filter.go: 24 test cases (multi-field filtering)
+# - ui/stats.go: 12 test cases (timing, pass rates)
 ```
 
 ## 🤝 Contributing
