@@ -308,7 +308,19 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if err != nil {
 						m.TestModel.Err = errors.EnhanceFileError(err, "export file")
 					} else {
-						m.TestModel.ExportSuccess = fmt.Sprintf("✅ Exported to %s", filename)
+						m.TestModel.ExportSuccess = fmt.Sprintf("✅ Exported JSON to %s", filename)
+					}
+				}
+				return m, nil
+			case "h":
+				if len(m.TestModel.Results) > 0 {
+					specPath := m.TestModel.SpecInput.Value()
+					baseURL := m.TestModel.UrlInput.Value()
+					filename, err := export.ExportResultsToHTML(m.TestModel.Results, specPath, baseURL)
+					if err != nil {
+						m.TestModel.Err = errors.EnhanceFileError(err, "HTML export file")
+					} else {
+						m.TestModel.ExportSuccess = fmt.Sprintf("✅ Exported HTML to %s", filename)
 					}
 				}
 				return m, nil

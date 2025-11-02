@@ -296,7 +296,7 @@ func ViewTest(m models.Model) string {
 			}
 		}
 		// Add instructions
-		instructions := "Press 'f' to filter | 'e' to export results"
+		instructions := "Press 'f' to filter | 'e' export JSON | 'h' export HTML"
 		if m.VerboseMode {
 			instructions += " | 'l' to view logs"
 		}

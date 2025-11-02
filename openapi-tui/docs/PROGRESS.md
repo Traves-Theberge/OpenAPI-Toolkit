@@ -324,11 +324,61 @@ All Tests:       PASSING ✅
   - Filter by endpoint to check specific API routes
   - Professional UX similar to modern test runners
 
+#### 8. HTML Export Format
+- **Status**: Complete ✅
+- **Implementation**:
+  - `html.go` (397 lines) - HTML export with embedded CSS
+    - `ExportResultsToHTML()` - Main HTML generation function
+    - `HTMLTemplateData` struct with complete template data
+    - `HTMLResult` struct for display-ready results
+    - `formatDuration()` - Human-readable time formatting
+  - `html_test.go` (306 lines) - Comprehensive test suite
+    - 3 test functions, 25 test cases total
+    - `TestExportResultsToHTML` - 5 export scenarios
+    - `TestFormatDuration` - 10 duration formatting tests
+    - `TestHTMLTemplateData` - Template data validation
+  - Key binding 'h' in `main.go` case 3 for HTML export
+  - Updated instructions in `views.go` to show HTML export option
+- **Features**:
+  - ✅ Professional HTML report with embedded CSS
+  - ✅ Responsive design with gradient header
+  - ✅ Statistics dashboard (Total/Passed/Failed/Pass Rate/Timing)
+  - ✅ Color-coded pass rate (green/yellow/red based on percentage)
+  - ✅ Styled results table with method badges
+  - ✅ Row coloring (green for success, red for failure)
+  - ✅ HTTP method color coding (GET/POST/PUT/PATCH/DELETE)
+  - ✅ Metadata section (spec path, base URL, timestamp)
+  - ✅ Duration formatting (µs, ms, s)
+  - ✅ Print-friendly styling
+  - ✅ Mobile-responsive layout
+  - ✅ Filename format: `openapi-test-results_YYYYMMDD_HHMMSS.html`
+- **Template Design**:
+  - Modern gradient header (purple/blue)
+  - Grid-based statistics cards with shadows
+  - Professional table design with hover effects
+  - Clean typography with system fonts
+  - Accessible color contrasts
+  - Footer with branding and links
+- **Test Coverage**: 25 test cases, all passing
+  - HTML structure validation
+  - CSS presence verification
+  - Data accuracy checks
+  - Metadata inclusion tests
+  - Duration formatting validation
+  - Pass rate calculation tests
+- **Impact**:
+  - Share test results with non-technical stakeholders
+  - Open reports in browser for better readability
+  - Professional-looking documentation for QA teams
+  - CI/CD artifacts that are human-friendly
+  - No external dependencies (self-contained HTML)
+  - Better than JSON for visual analysis
+
 ## Summary
 
 **Phase 1 Status**: ✅ COMPLETE (5/5 features - 100%)
-**Phase 2 Status**: 🚀 IN PROGRESS (7/15 features - 47%)
-**Test Coverage**: 41 tests passing (24 filter + 12 stats + 17 main, 1 skipped)
+**Phase 2 Status**: 🚀 IN PROGRESS (8/15 features - 53%)
+**Test Coverage**: 66 tests passing (25 HTML + 24 filter + 12 stats + 17 main, 1 skipped)
 **Build Status**: ✅ All tests passing, binary builds successfully
 **Code Organization**: ✅ Standard Go project layout (cmd/ + internal/)
 **Documentation**: ✅ README, ARCHITECTURE, and PROGRESS fully updated
@@ -339,9 +389,10 @@ The application now:
 - ✅ Validates API responses against OpenAPI specifications (status codes, content types)
 - ✅ Supports multiple authentication methods (Bearer, API Key, Basic)
 - ✅ Reports detailed validation errors with spec compliance checking
-- ✅ Has comprehensive test coverage (41 tests, 1,581 lines)
+- ✅ Has comprehensive test coverage (66 tests, 1,581 lines)
 - ✅ Provides actionable error messages with helpful suggestions
 - ✅ Exports test results to JSON for CI/CD integration
+- ✅ **Exports test results to professional HTML reports**
 - ✅ Verbose logging mode with full request/response details
 - ✅ Configuration persistence across sessions
 - ✅ **Standard Go project layout with modular architecture**
@@ -349,6 +400,6 @@ The application now:
 - ✅ **Real-time response filtering with special keywords**
 
 **Phase 1 Achievement**: All critical foundation features delivered! 🎉
-**Phase 2 Progress**: 7/15 features complete (47%) - DevEx improvements rolling out! 🚀
+**Phase 2 Progress**: 8/15 features complete (53%) - Over halfway there! 🚀
 **Architecture**: Refactored to standard Go layout (cmd/ + internal/ packages)
-**Latest Feature**: Response filtering with real-time search and special keywords �
+**Latest Feature**: HTML export with professional styling and embedded CSS 📄
