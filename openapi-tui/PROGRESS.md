@@ -1,12 +1,12 @@
 # OpenAPI TUI - Development Progress
 
-## Phase 1: Critical Foundation (3 of 5 Complete) ✅
+## Phase 1: Critical Foundation (4 of 5 Complete) ✅
 
 ### ✅ Completed Features
 
 #### 1. Unit Tests & Coverage Baseline
 - **Status**: Complete
-- **Coverage**: 30.3% of statements
+- **Coverage**: 35.2% of statements (was 0% → 21.9% → 30.3% → 35.2%)
 - **Test Files**: `main_test.go` (756 lines)
 - **Test Functions**: 9 comprehensive test functions
 - **Test Cases**: 50+ test cases including edge cases
@@ -53,12 +53,22 @@
 - **Test Coverage**: 9 test cases
 - **Impact**: Paths like `/users/{id}` become `/users/1`
 
-### 🔄 In Progress / Pending
-
 #### 5. Response Schema Validation
-- **Status**: Not started
-- **Priority**: High (Phase 1)
-- **Scope**: Compare responses against spec schemas, validate status codes
+- **Status**: Complete  
+- **Functions Implemented**:
+  - `validateResponse()` - Main validation against operation responses
+  - Modified `testEndpoint()` to return response object
+  - Updated `runTests()` to validate all responses
+- **Features**:
+  - ✅ Status code validation against spec
+  - ✅ Content-Type verification
+  - ✅ Default response fallback support
+  - ✅ Detailed error reporting
+  - ✅ Integration with test results display
+- **Test Coverage**: 7 test cases covering various scenarios
+- **Impact**: Tests now show "OK (validated)" for spec-compliant responses and report validation errors
+
+### 🔄 In Progress / Pending
 
 #### 6. Authentication Support
 - **Status**: Not started
@@ -69,23 +79,25 @@
 
 ### Test Coverage
 ```
-Phase Start:  0.0% (no tests)
+Phase Start:   0.0% (no tests)
 After Task #1: 21.9% (initial test suite)
 After Task #2: 30.3% (request body tests added)
-Target:       50%+ (Phase 1 complete)
+After Task #3: 35.2% (response validation tests added)
+Target:        50%+ (Phase 1 complete)
 ```
 
 ### Lines of Code
 ```
-main.go:       848 lines (was 804, +44 for request body generation)
-main_test.go:  756 lines (was 442, +314 for new tests)
-Total Test:    756 lines
+main.go:       1074 lines (was 804 → 848 → 1074, +270 for validation & request bodies)
+main_test.go:  918 lines (was 442 → 756 → 918, +476 for comprehensive tests)
+Total Test:    918 lines
+Test Ratio:    0.85:1 (near 1:1 test-to-code ratio)
 ```
 
 ### Test Stats
 ```
-Test Functions:  9
-Test Cases:      50+
+Test Functions:  10
+Test Cases:      60+
 Table-Driven:    Yes
 Integration:     Yes
 Edge Cases:      Yes
@@ -140,9 +152,16 @@ All Passing:     ✅ Yes
 
 ## Summary
 
-**Completed**: 3/5 Phase 1 critical features (60%)
-**Test Coverage**: 30.3% (target: 50%+)
+**Completed**: 4/5 Phase 1 critical features (80%)
+**Test Coverage**: 35.2% (target: 50%+)
 **Build Status**: ✅ All tests passing, binary builds successfully
-**Documentation**: ✅ ARCHITECTURE.md fully updated
+**Documentation**: ✅ ARCHITECTURE.md fully updated with response validation
 
-The application now intelligently generates realistic request bodies, handles query parameters, and replaces path parameters automatically. This enables comprehensive API testing with minimal user input - just provide the OpenAPI spec and base URL!
+The application now:
+- Intelligently generates realistic request bodies from OpenAPI schemas
+- Handles query parameters and path parameter substitution automatically
+- Validates API responses against OpenAPI specifications
+- Reports detailed validation errors (status codes, content types)
+- Marks validated responses as "OK (validated)" in test results
+
+**Remaining**: Only Authentication Support (#5) left for Phase 1 completion!

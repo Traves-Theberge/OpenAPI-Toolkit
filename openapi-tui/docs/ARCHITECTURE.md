@@ -406,29 +406,80 @@ Key business logic functions with test coverage:
 
 ### Core Testing Functions
 - `runTests(specPath, baseURL)` - Main testing orchestrator
-- `testEndpoint(method, url, body)` - HTTP client with 10s timeout
+- `testEndpoint(method, url, body)` - HTTP client with 10s timeout, returns status and response
 - `replacePlaceholders(path)` - Replace `{id}` with `"1"` using regex
 - `buildQueryParams(operation)` - Generate query strings from spec
 - `generateRequestBody(operation)` - Create JSON from schema
 - `generateSampleFromSchema(schema)` - Recursive schema-to-sample converter
+- `validateResponse(resp, operation, status)` - Validate response against spec
 
 ### Validation Functions
 - `validateSpec(specPath)` - OpenAPI spec validation
+- `validateResponse(...)` - Response status code and content-type validation
 
 ### Test Coverage
-- **Current Coverage**: 30.3% of statements
-- **Test Files**: 9 test functions, 50+ test cases
+- **Current Coverage**: 35.2% of statements
+- **Test Files**: 10 test functions, 60+ test cases
 - **Test Types**: Unit tests, integration tests, table-driven tests
-- **Edge Cases**: Nil handling, invalid inputs, nested structures
+- **Edge Cases**: Nil handling, invalid inputs, nested structures, response validation scenarios
+
+## Response Validation
+
+The application validates API responses against OpenAPI specifications to detect mismatches:
+
+```mermaid
+flowchart TD
+    A["validateResponse()"] --> B{"Operation has responses?"}
+    B -->|No| C["Mark as valid - no spec"]
+    B -->|Yes| D["Look for status code"]
+    D --> E{"Exact match found?"}
+    E -->|Yes| F["Use matched response"]
+    E -->|No| G{"Default response exists?"}
+    G -->|Yes| H["Use default response"]
+    G -->|No| I["Mark invalid - status not in spec"]
+    F --> J["Validate Content-Type"]
+    H --> J
+    J --> K{"Content-Type defined?"}
+    K -->|No| L["Skip content validation"]
+    K -->|Yes| M{"Content-Type matches?"}
+    M -->|Yes| N["Mark as valid"]
+    M -->|No| O["Mark invalid - wrong content-type"]
+    L --> N
+    I --> P["Return validation errors"]
+    O --> P
+    N --> Q["Return success"]
+```
+
+### Validation Checks
+
+1. **Status Code Validation**
+   - Checks if response status matches spec
+   - Falls back to "default" response if defined
+   - Reports "status X not defined in spec" errors
+
+2. **Content-Type Validation**
+   - Extracts base content type (ignores charset)
+   - Compares against spec's response content types
+   - Handles common cases like `application/json; charset=utf-8`
+
+3. **Error Reporting**
+   - Collects all validation errors
+   - Shows first error in test results
+   - Marks successful validations as "OK (validated)"
+
+### Future Enhancements
+- JSON schema validation against response body
+- Header validation
+- Response time tracking
 
 ## Recent Enhancements
 
-### Phase 1 Implementation (Completed)
+### Phase 1 Implementation (4 of 5 Completed) ✅
 
 1. **Unit Tests (#1)** ✅
    - Created comprehensive test suite
    - Table-driven tests for all core functions
-   - Coverage baseline: 21.9% → 30.3%
+   - Coverage progression: 0% → 21.9% → 30.3% → 35.2%
 
 2. **Request Body Generation (#2)** ✅
    - Intelligent JSON generation from OpenAPI schemas
@@ -437,7 +488,14 @@ Key business logic functions with test coverage:
    - Example and default value usage
    - 14 test cases covering all schema types
 
-3. **Query Parameter Handling (#4)** ✅
+3. **Response Schema Validation (#3)** ✅
+   - Validates status codes against spec
+   - Content-type verification
+   - Default response fallback support
+   - 7 test cases with edge case coverage
+   - Integrated into testing pipeline
+
+4. **Query Parameter Handling (#4)** ✅
    - Automatic extraction from operation specs
    - Type-aware sample value generation
    - Proper URL encoding with `?` and `&`
@@ -445,8 +503,7 @@ Key business logic functions with test coverage:
 
 ### Pending Features
 
-- **Response Schema Validation (#3)** - Compare responses against spec schemas
-- **Authentication Support (#5)** - Bearer tokens, API keys, Basic auth
+- **Authentication Support (#5)** - Bearer tokens, API keys, Basic auth (Phase 1 final feature)
 - **15 Additional Features** - See project roadmap for Phase 2-4
 
 This architecture provides a robust, maintainable, and user-friendly TUI for OpenAPI testing. The recent enhancements enable realistic API testing with automatically generated request bodies, query parameters, and path parameter substitution. Future phases will add response validation, authentication, error reporting improvements, and advanced features like custom request editing and spec diffing.

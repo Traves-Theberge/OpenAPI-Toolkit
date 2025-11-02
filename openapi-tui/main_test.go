@@ -900,18 +900,6 @@ func TestValidateResponse(t *testing.T) {
 				resp.Header.Set("Content-Type", tt.contentType)
 			}
 
-			// Debug: check what's in the responses
-			if tt.operation != nil && tt.operation.Responses != nil {
-				respMap := tt.operation.Responses.Map()
-				t.Logf("Response map keys: %v", func() []string {
-					keys := make([]string, 0, len(respMap))
-					for k := range respMap {
-						keys = append(keys, k)
-					}
-					return keys
-				}())
-			}
-			
 			result := validateResponse(resp, tt.operation, tt.statusCode)
 
 			if result.valid != tt.expectValid {
