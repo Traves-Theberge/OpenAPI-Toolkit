@@ -92,9 +92,9 @@ go build
 
 ### CLI Documentation
 - [CLI README](openapi-cli/README.md) - Complete CLI documentation
-- Installation, usage, examples, troubleshooting
-- API testing guide
-- CI/CD integration examples
+- [Architecture Guide](openapi-cli/docs/ARCHITECTURE.md) - System design and component architecture
+- [Progress Tracking](openapi-cli/docs/PROGRESS.md) - Feature roadmap and development status
+- [Testing Guide](openapi-cli/docs/TESTING-GUIDE.md) - Comprehensive testing procedures
 
 ### TUI Documentation
 - [TUI README](openapi-tui/README.md) - TUI user guide
