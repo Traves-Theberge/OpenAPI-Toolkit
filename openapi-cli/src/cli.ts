@@ -33,7 +33,21 @@ program
   .option('-e, --export <file>', 'Export results to JSON file')
   .option('-v, --verbose', 'Show verbose output with request/response details')
   .option('-t, --timeout <ms>', 'Request timeout in milliseconds (default: 10000)', '10000')
-  .action(async (spec: string, baseUrl: string, options: { export?: string; verbose?: boolean; timeout?: string }) => {
+  .option('--auth-bearer <token>', 'Bearer token authentication')
+  .option('--auth-api-key <key>', 'API key authentication (use with --auth-header or --auth-query)')
+  .option('--auth-header <name>', 'Header name for API key (default: X-API-Key)', 'X-API-Key')
+  .option('--auth-query <name>', 'Query parameter name for API key')
+  .option('--auth-basic <user:pass>', 'Basic authentication (username:password)')
+  .action(async (spec: string, baseUrl: string, options: {
+    export?: string;
+    verbose?: boolean;
+    timeout?: string;
+    authBearer?: string;
+    authApiKey?: string;
+    authHeader?: string;
+    authQuery?: string;
+    authBasic?: string;
+  }) => {
     try {
       await runTests(spec, baseUrl, options);
       console.log('All tests passed.');

@@ -181,7 +181,7 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 ---
 
-## Phase 3: Advanced Features (1 of 15 Complete) 🎯
+## Phase 3: Advanced Features (2 of 15 Complete) 🎯
 
 ### ✅ Completed Features (Phase 3)
 
@@ -198,9 +198,24 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 - **Use Cases**: Slow APIs, fast-fail scenarios, timeout testing, network issues
 - **Documentation**: Updated README with examples and use cases
 
+#### 2. Authentication Support
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - Bearer token authentication (`--auth-bearer <token>`)
+  - API key in header (`--auth-api-key <key>` with optional `--auth-header <name>`)
+  - API key in query parameter (`--auth-api-key <key> --auth-query <name>`)
+  - Basic authentication (`--auth-basic <user:pass>`)
+  - Base64 encoding for Basic auth
+  - Flexible header configuration
+- **Files**: `src/cli.ts` (lines 36-40), `src/commands/test.ts` (lines 24-33, 181-217)
+- **Use Cases**: OAuth 2.0 APIs, JWT authentication, API key services, HTTP Basic Auth
+- **Testing**: Verified with HTTPBin for all three authentication methods
+- **Documentation**: Comprehensive README section with examples and security notes
+
 ---
 
-### 🚀 Planned Features (14 remaining)
+### 🚀 Planned Features (13 remaining)
 
 #### High Priority
 
@@ -235,36 +250,28 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 #### Medium Priority
 
-6. **Authentication Support** ⭐⭐
-   - Bearer tokens (`--auth-bearer <token>`)
-   - API keys (`--auth-api-key <key>`)
-   - Basic auth (`--auth-basic <user:pass>`)
-   - Environment variable support
-   - **Complexity**: Medium
-   - **Impact**: High (but not for automation use case)
-
-7. **Response Schema Validation** ⭐⭐
+6. **Response Schema Validation** ⭐⭐
    - Validate response bodies against schema
    - Report schema mismatches
    - Detailed validation errors
    - **Complexity**: High (requires OpenAPI parser)
    - **Impact**: High
 
-8. **JUnit XML Export** ⭐
+7. **JUnit XML Export** ⭐
    - `--export-junit <file>` flag
    - CI/CD test report integration
    - Standard JUnit XML format
    - **Complexity**: Medium
    - **Impact**: Medium
 
-9. **Retry Logic** ⭐
+8. **Retry Logic** ⭐
    - `--retry <count>` flag
    - Exponential backoff
    - Only retry on network errors (not 4xx/5xx)
    - **Complexity**: Medium
    - **Impact**: Low
 
-10. **Custom Headers** ⭐
+9. **Custom Headers** ⭐
     - `--header "Name: Value"` flag (repeatable)
     - Apply to all requests
     - Override default headers
@@ -273,35 +280,35 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 #### Low Priority
 
-11. **Filter by HTTP Method** ⭐
+10. **Filter by HTTP Method** ⭐
     - `--methods GET,POST` flag
     - Only test specified methods
     - Faster targeted testing
     - **Complexity**: Low
     - **Impact**: Low
 
-12. **Filter by Path Pattern** ⭐
+11. **Filter by Path Pattern** ⭐
     - `--paths "/users/*"` flag
     - Glob pattern matching
     - Subset testing
     - **Complexity**: Low
     - **Impact**: Low
 
-13. **Quiet Mode** ⭐
+12. **Quiet Mode** ⭐
     - `--quiet` / `-q` flag
     - No output except errors
     - Only final exit code
     - **Complexity**: Low
     - **Impact**: Low
 
-14. **Watch Mode** ⭐
+13. **Watch Mode** ⭐
     - `--watch` flag
     - Re-run on spec file changes
     - Development workflow
     - **Complexity**: Medium
     - **Impact**: Low
 
-15. **Progress Bar** ⭐
+14. **Progress Bar** ⭐
     - Show progress during long test runs
     - "Testing 5/50 endpoints..."
     - Spinner animation
@@ -468,7 +475,7 @@ npm run lint
 | **Core Testing** | ✅ Complete | ✅ Complete | Both production-ready |
 | **HTTP Methods** | 7 methods | 5 methods | CLI ahead |
 | **Export Formats** | JSON | JSON, HTML, JUnit | TUI ahead |
-| **Authentication** | ❌ Missing | ✅ Complete | TUI ahead |
+| **Authentication** | ✅ Complete | ✅ Complete | Parity achieved |
 | **Verbose Logging** | ✅ Complete | ✅ Complete | Parity achieved |
 | **Error Messages** | ✅ Enhanced | ✅ Enhanced | Parity achieved |
 | **Schema Validation** | ❌ Missing | ✅ Complete | TUI ahead |

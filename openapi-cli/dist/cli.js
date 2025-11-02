@@ -31,6 +31,11 @@ program
     .option('-e, --export <file>', 'Export results to JSON file')
     .option('-v, --verbose', 'Show verbose output with request/response details')
     .option('-t, --timeout <ms>', 'Request timeout in milliseconds (default: 10000)', '10000')
+    .option('--auth-bearer <token>', 'Bearer token authentication')
+    .option('--auth-api-key <key>', 'API key authentication (use with --auth-header or --auth-query)')
+    .option('--auth-header <name>', 'Header name for API key (default: X-API-Key)', 'X-API-Key')
+    .option('--auth-query <name>', 'Query parameter name for API key')
+    .option('--auth-basic <user:pass>', 'Basic authentication (username:password)')
     .action(async (spec, baseUrl, options) => {
     try {
         await (0, test_1.runTests)(spec, baseUrl, options);

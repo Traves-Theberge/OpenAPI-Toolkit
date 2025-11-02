@@ -16,6 +16,8 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **JSON Export** - Export test results to JSON file for CI/CD integration
 - **Verbose Mode** - Show detailed request/response headers and timing info
 - **Enhanced Error Messages** - Actionable suggestions for fixing validation errors
+- **Authentication Support** - Bearer tokens, API keys (header/query), and Basic authentication
+- **Custom Timeouts** - Configurable request timeouts for slow APIs or fast-fail scenarios
 
 ## Installation
 
@@ -75,6 +77,21 @@ openapi-test test path/to/spec.yaml http://api.example.com --timeout 30000
 
 # Combine flags
 openapi-test test path/to/spec.yaml http://api.example.com -v -e results.json -t 30000
+
+# Bearer token authentication
+openapi-test test path/to/spec.yaml http://api.example.com --auth-bearer YOUR_TOKEN
+
+# API key in header (default: X-API-Key)
+openapi-test test path/to/spec.yaml http://api.example.com --auth-api-key YOUR_API_KEY
+
+# API key in custom header
+openapi-test test path/to/spec.yaml http://api.example.com --auth-api-key YOUR_KEY --auth-header X-Custom-API-Key
+
+# API key in query parameter
+openapi-test test path/to/spec.yaml http://api.example.com --auth-api-key YOUR_KEY --auth-query api_key
+
+# Basic authentication
+openapi-test test path/to/spec.yaml http://api.example.com --auth-basic username:password
 ```
 
 **Output Example:**
@@ -214,6 +231,81 @@ openapi-test test slow-api.yaml https://slow-api.com -t 60000 -v
 # Fast fail with 2-second timeout
 openapi-test test fast-api.yaml https://fast-api.com -t 2000
 ```
+
+### Authentication
+
+Test protected APIs with multiple authentication methods:
+
+#### Bearer Token Authentication
+
+```bash
+openapi-test test spec.yaml https://api.example.com --auth-bearer YOUR_TOKEN
+```
+
+Sends an `Authorization: Bearer YOUR_TOKEN` header with all requests.
+
+**Use Cases:**
+- OAuth 2.0 APIs
+- JWT-based authentication
+- Modern REST APIs
+
+#### API Key Authentication
+
+**In Header (default: X-API-Key):**
+```bash
+openapi-test test spec.yaml https://api.example.com --auth-api-key YOUR_KEY
+```
+
+**In Custom Header:**
+```bash
+openapi-test test spec.yaml https://api.example.com --auth-api-key YOUR_KEY --auth-header X-Custom-API-Key
+```
+
+**In Query Parameter:**
+```bash
+openapi-test test spec.yaml https://api.example.com --auth-api-key YOUR_KEY --auth-query api_key
+```
+
+Adds the API key to either:
+- Request headers (default or custom header name)
+- Query string parameter
+
+**Use Cases:**
+- API key-based services
+- Third-party integrations
+- Legacy APIs
+
+#### Basic Authentication
+
+```bash
+openapi-test test spec.yaml https://api.example.com --auth-basic username:password
+```
+
+Sends an `Authorization: Basic <base64-encoded-credentials>` header.
+
+**Use Cases:**
+- HTTP Basic Auth APIs
+- Simple authentication scenarios
+- Internal APIs
+
+**Example with Multiple Auth Options:**
+```bash
+# Test authenticated endpoints with verbose output and export
+openapi-test test protected-api.yaml https://api.example.com \
+  --auth-bearer $API_TOKEN \
+  -v -e auth-test-results.json
+
+# Test API with key in custom header
+openapi-test test spec.yaml https://api.example.com \
+  --auth-api-key $API_KEY \
+  --auth-header X-API-Secret \
+  -t 30000
+```
+
+**Security Notes:**
+- Never commit credentials to version control
+- Use environment variables for sensitive data
+- Credentials are only sent to the specified base URL
 
 ### Enhanced Error Messages
 

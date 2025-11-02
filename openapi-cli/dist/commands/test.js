@@ -55,7 +55,7 @@ async function runTests(specPath, baseUrl, options = {}) {
     for (const [pathStr, methods] of Object.entries(spec.paths)) {
         for (const [method, operation] of Object.entries(methods)) {
             if (typeof operation === 'object' && operation !== null) {
-                const result = await testEndpoint(baseUrl, pathStr, method.toUpperCase(), operation, options.verbose, timeoutMs);
+                const result = await testEndpoint(baseUrl, pathStr, method.toUpperCase(), operation, options.verbose, timeoutMs, options);
                 results.push(result);
                 if (result.success) {
                     successCount++;
@@ -162,18 +162,40 @@ function buildQueryParams(operation) {
     });
     return queryParams.length > 0 ? '?' + queryParams.join('&') : '';
 }
-async function testEndpoint(baseUrl, pathStr, method, operation, verbose = false, timeout = 10000) {
+async function testEndpoint(baseUrl, pathStr, method, operation, verbose = false, timeout = 10000, authOptions = {}) {
     // Replace path placeholders like {id} with actual values
     const processedPath = replacePlaceholders(pathStr);
     // Build query parameters
-    const queryString = buildQueryParams(operation);
+    let queryString = buildQueryParams(operation);
+    // Add API key to query if specified
+    if (authOptions.authApiKey && authOptions.authQuery) {
+        const queryParam = `${authOptions.authQuery}=${encodeURIComponent(authOptions.authApiKey)}`;
+        queryString = queryString ? `${queryString}&${queryParam}` : `?${queryParam}`;
+    }
     const url = `${baseUrl}${processedPath}${queryString}`;
     try {
         let response;
         const startTime = Date.now();
+        // Build request headers
+        const headers = {};
+        // Bearer token authentication
+        if (authOptions.authBearer) {
+            headers['Authorization'] = `Bearer ${authOptions.authBearer}`;
+        }
+        // API key in header
+        if (authOptions.authApiKey && !authOptions.authQuery) {
+            const headerName = authOptions.authHeader || 'X-API-Key';
+            headers[headerName] = authOptions.authApiKey;
+        }
+        // Basic authentication
+        if (authOptions.authBasic) {
+            const encoded = Buffer.from(authOptions.authBasic).toString('base64');
+            headers['Authorization'] = `Basic ${encoded}`;
+        }
         const config = {
             timeout: timeout, // Configurable timeout
             validateStatus: () => true, // Don't throw on any status code
+            headers: headers,
         };
         switch (method) {
             case 'GET':
