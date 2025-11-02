@@ -181,7 +181,7 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 ---
 
-## Phase 3: Advanced Features (5 of 15 Complete) 🎯
+## Phase 3: Advanced Features (6 of 15 Complete) 🎯
 
 ### ✅ Completed Features (Phase 3)
 
@@ -256,9 +256,23 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 - **Testing**: Tested success (no output), tested failure (errors shown), verified exit codes, unit tests pass
 - **Documentation**: Comprehensive README section with CI/CD examples and behavior description
 
+#### 6. Filter by Path Pattern
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - `-p` / `--paths` flag with pattern matching
+  - Wildcard support: `*` matches any characters
+  - Pattern converted to regex internally
+  - Special characters auto-escaped (except *)
+  - Filters paths before method iteration
+- **Files**: `src/cli.ts` (line 44), `src/commands/test.ts` (lines 36, 60-68, 350-358)
+- **Use Cases**: Endpoint isolation, incremental testing, debugging, staged rollouts, resource-based CI/CD
+- **Testing**: Tested exact match (/users), wildcard (/users/*), prefix (/posts*), unit tests pass
+- **Documentation**: Comprehensive README section with pattern syntax and examples
+
 ---
 
-### 🚀 Planned Features (10 remaining)
+### 🚀 Planned Features (9 remaining)
 
 #### High Priority
 
@@ -316,21 +330,14 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 #### Low Priority
 
-9. **Filter by Path Pattern** ⭐
-    - `--paths "/users/*"` flag
-    - Glob pattern matching
-    - Subset testing
-    - **Complexity**: Low
-    - **Impact**: Low
-
-10. **Watch Mode** ⭐
+9. **Watch Mode** ⭐
     - `--watch` flag
     - Re-run on spec file changes
     - Development workflow
     - **Complexity**: Medium
     - **Impact**: Low
 
-11. **Progress Bar** ⭐
+10. **Progress Bar** ⭐
     - Show progress during long test runs
     - "Testing 5/50 endpoints..."
     - Spinner animation

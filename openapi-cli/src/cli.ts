@@ -41,6 +41,7 @@ program
   .option('-H, --header <header>', 'Custom header (Name: Value), repeatable', (value, previous: string[] = []) => [...previous, value], [])
   .option('-m, --methods <methods>', 'Filter by HTTP methods (comma-separated, e.g., GET,POST)')
   .option('-q, --quiet', 'Quiet mode - only show errors and final exit code')
+  .option('-p, --paths <pattern>', 'Filter by path pattern (supports * wildcard, e.g., /users/*)')
   .action(async (spec: string, baseUrl: string, options: {
     export?: string;
     verbose?: boolean;
@@ -53,6 +54,7 @@ program
     header?: string[];
     methods?: string;
     quiet?: boolean;
+    paths?: string;
   }) => {
     try {
       await runTests(spec, baseUrl, options);

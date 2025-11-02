@@ -20,6 +20,7 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **Custom Timeouts** - Configurable request timeouts for slow APIs or fast-fail scenarios
 - **Custom Headers** - Add custom HTTP headers to all requests (repeatable -H flag)
 - **Method Filtering** - Test only specific HTTP methods (--methods GET,POST)
+- **Path Filtering** - Test only paths matching a pattern with * wildcard (--paths /users/*)
 - **Quiet Mode** - Suppress output except errors and exit codes for CI/CD (--quiet)
 
 ## Installation
@@ -104,6 +105,9 @@ openapi-test test path/to/spec.yaml http://api.example.com --methods GET,POST
 
 # Quiet mode (only errors and exit code)
 openapi-test test path/to/spec.yaml http://api.example.com --quiet
+
+# Filter by path pattern (supports * wildcard)
+openapi-test test path/to/spec.yaml http://api.example.com --paths "/users/*"
 ```
 
 **Output Example:**
@@ -464,6 +468,55 @@ else
   exit 1
 fi
 ```
+
+### Filter by Path Pattern
+
+Test only paths matching a specific pattern with wildcard support:
+
+```bash
+# Test exact path
+openapi-test test spec.yaml https://api.example.com --paths "/users"
+
+# Test all paths starting with /users/
+openapi-test test spec.yaml https://api.example.com -p "/users/*"
+
+# Test all /posts paths (including /posts/123)
+openapi-test test spec.yaml https://api.example.com --paths "/posts*"
+```
+
+**Pattern Syntax:**
+- Exact match: `/users` matches only `/users`
+- Wildcard: `*` matches any characters
+- `/users/*` matches `/users/123`, `/users/abc`, etc.
+- `/posts*` matches `/posts`, `/posts/1`, `/posts/comments`
+
+**Use Cases:**
+- **Endpoint isolation**: Test specific API sections
+- **Incremental testing**: Test one resource at a time
+- **Debugging**: Focus on problematic endpoints
+- **Staged rollouts**: Test new paths before release
+- **Resource-based CI/CD**: Different pipelines for different resources
+
+**Examples:**
+```bash
+# Test only user endpoints
+openapi-test test spec.yaml https://api.example.com --paths "/users*"
+
+# Test specific nested path
+openapi-test test spec.yaml https://api.example.com --paths "/api/v1/users/*"
+
+# Combine with method filter
+openapi-test test spec.yaml https://api.example.com \
+  --paths "/admin/*" \
+  --methods GET \
+  -q
+```
+
+**Notes:**
+- Pattern matching uses regex internally
+- Special regex characters (except *) are automatically escaped
+- Case-sensitive matching
+- If no paths match, zero tests will run
 
 ### Enhanced Error Messages
 

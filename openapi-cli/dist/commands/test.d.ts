@@ -10,6 +10,7 @@ interface TestOptions {
     header?: string[];
     methods?: string;
     quiet?: boolean;
+    paths?: string;
 }
 export declare function runTests(specPath: string, baseUrl: string, options?: TestOptions): Promise<void>;
 export {};

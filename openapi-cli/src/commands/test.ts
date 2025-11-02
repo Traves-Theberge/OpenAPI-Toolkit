@@ -33,6 +33,7 @@ interface TestOptions {
   header?: string[];
   methods?: string;
   quiet?: boolean;
+  paths?: string;
 }
 
 export async function runTests(specPath: string, baseUrl: string, options: TestOptions = {}): Promise<void> {
@@ -56,8 +57,16 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
     ? options.methods.split(',').map(m => m.trim().toUpperCase())
     : null;
 
+  // Parse path pattern filter (supports * wildcard)
+  const pathPattern = options.paths ? options.paths.trim() : null;
+
   // For each path and method, test the endpoint
   for (const [pathStr, methods] of Object.entries(spec.paths)) {
+    // Skip if path filter is active and this path doesn't match
+    if (pathPattern && !matchesPattern(pathStr, pathPattern)) {
+      continue;
+    }
+
     for (const [method, operation] of Object.entries(methods)) {
       if (typeof operation === 'object' && operation !== null) {
         // Skip if method filter is active and this method is not in the list
@@ -333,4 +342,17 @@ async function testEndpoint(
       message,
     };
   }
+}
+
+/**
+ * Match a path against a pattern with * wildcard support
+ */
+function matchesPattern(path: string, pattern: string): boolean {
+  // Convert pattern to regex, escaping special chars except *
+  const regexPattern = pattern
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
+    .replace(/\*/g, '.*');                  // Convert * to .*
+
+  const regex = new RegExp(`^${regexPattern}$`);
+  return regex.test(path);
 }
