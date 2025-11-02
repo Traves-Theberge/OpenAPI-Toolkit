@@ -1,4 +1,4 @@
-# OpenAPI CLI TUI Architecture
+# OpenAPI Toolkit - TUI Architecture
 
 ## Overview
 
