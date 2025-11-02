@@ -233,7 +233,7 @@ func TestTestEndpoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			url := server.URL + tt.path
-			status, resp, err := testEndpoint(tt.method, url, nil, nil)
+			status, resp, _, err := testEndpoint(tt.method, url, nil, nil, false)
 
 			if tt.wantError && err == nil {
 				t.Error("Expected error but got none")
@@ -252,7 +252,7 @@ func TestTestEndpoint(t *testing.T) {
 
 	// Test unsupported method - now all methods are supported
 	t.Run("DELETE method", func(t *testing.T) {
-		_, resp, err := testEndpoint("DELETE", server.URL+"/success", nil, nil)
+		_, resp, _, err := testEndpoint("DELETE", server.URL+"/success", nil, nil, false)
 		if err != nil {
 			t.Errorf("Expected no error but got: %v", err)
 		}
@@ -263,7 +263,7 @@ func TestTestEndpoint(t *testing.T) {
 
 	// Test invalid URL
 	t.Run("invalid URL", func(t *testing.T) {
-		_, resp, err := testEndpoint("GET", "://invalid-url", nil, nil)
+		_, resp, _, err := testEndpoint("GET", "://invalid-url", nil, nil, false)
 		if err == nil {
 			t.Error("Expected error for invalid URL but got none")
 		}
@@ -274,7 +274,7 @@ func TestTestEndpoint(t *testing.T) {
 
 	// Test unreachable server
 	t.Run("unreachable server", func(t *testing.T) {
-		_, resp, err := testEndpoint("GET", "http://localhost:99999/test", nil, nil)
+		_, resp, _, err := testEndpoint("GET", "http://localhost:99999/test", nil, nil, false)
 		if err == nil {
 			t.Error("Expected error for unreachable server but got none")
 		}
@@ -295,7 +295,7 @@ func TestTestEndpointTimeout(t *testing.T) {
 	defer server.Close()
 
 	// Test that we can make successful requests (timeout is working properly)
-	status, resp, err := testEndpoint("GET", server.URL+"/test", nil, nil)
+	status, resp, _, err := testEndpoint("GET", server.URL+"/test", nil, nil, false)
 	if err != nil {
 		t.Errorf("Expected no error but got: %v", err)
 	}
@@ -363,7 +363,7 @@ paths:
 	}
 
 	// Run tests
-	results, err := runTests(specPath, server.URL, nil)
+	results, err := runTests(specPath, server.URL, nil, false)
 	if err != nil {
 		t.Fatalf("runTests failed: %v", err)
 	}
@@ -387,7 +387,7 @@ paths:
 
 // TestRunTestsInvalidSpec tests error handling
 func TestRunTestsInvalidSpec(t *testing.T) {
-	_, err := runTests("/nonexistent/spec.yaml", "http://example.com", nil)
+	_, err := runTests("/nonexistent/spec.yaml", "http://example.com", nil, false)
 	if err == nil {
 		t.Error("Expected error for invalid spec but got none")
 	}
@@ -434,7 +434,7 @@ paths:
 	}
 
 	// Run tests
-	results, err := runTests(specPath, server.URL, nil)
+	results, err := runTests(specPath, server.URL, nil, false)
 	if err != nil {
 		t.Fatalf("runTests failed: %v", err)
 	}
@@ -1136,7 +1136,7 @@ func TestAuthIntegration(t *testing.T) {
 			receivedBasicAuth = false
 
 			// Make request
-			status, resp, err := testEndpoint("GET", server.URL+"/test", nil, tt.auth)
+			status, resp, _, err := testEndpoint("GET", server.URL+"/test", nil, tt.auth, false)
 			if err != nil {
 				t.Fatalf("testEndpoint failed: %v", err)
 			}

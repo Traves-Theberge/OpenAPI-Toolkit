@@ -72,10 +72,23 @@ type testModel struct {
 
 // testResult represents a single API endpoint test result
 type testResult struct {
-	method   string // HTTP method (GET, POST, etc.)
-	endpoint string // API endpoint path
-	status   string // HTTP status code or "ERR"
-	message  string // Success message or error details
+	method   string    // HTTP method (GET, POST, etc.)
+	endpoint string    // API endpoint path
+	status   string    // HTTP status code or "ERR"
+	message  string    // Success message or error details
+	duration time.Duration // Request duration
+	logEntry *logEntry // Detailed log information (optional)
+}
+
+// logEntry contains detailed request/response information for debugging
+type logEntry struct {
+	requestURL     string            // Full request URL
+	requestHeaders map[string]string // Request headers sent
+	requestBody    string            // Request body (if any)
+	responseHeaders map[string]string // Response headers received
+	responseBody    string            // Response body (truncated if large)
+	duration       time.Duration     // Total request duration
+	timestamp      time.Time         // When the request was made
 }
 
 // validationResult contains detailed validation information for a response
@@ -319,6 +332,7 @@ type model struct {
 	screen       screen        // Current screen being displayed
 	width        int           // Terminal width (updated via WindowSizeMsg)
 	height       int           // Terminal height (updated via WindowSizeMsg)
+	verboseMode  bool          // Whether verbose logging is enabled
 	validateModel validateModel // Embedded validation model
 	testModel     testModel     // Embedded testing model
 }
@@ -389,6 +403,10 @@ func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "h", "?":
 		// Show help screen
 		m.screen = helpScreen
+		return m, nil
+	case "v":
+		// Toggle verbose mode
+		m.verboseMode = !m.verboseMode
 		return m, nil
 	case "enter":
 		// Select current menu item
@@ -505,7 +523,7 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.testModel.testing = true
 				// Start async testing command
 				// TODO: Collect auth configuration from user in future enhancement
-				return m, runTestCmd(m.testModel.specInput.Value(), m.testModel.urlInput.Value(), nil)
+				return m, runTestCmd(m.testModel.specInput.Value(), m.testModel.urlInput.Value(), nil, m.verboseMode)
 			case tea.KeyCtrlC, tea.KeyEsc:
 				// Return to menu and reset test state
 				m.screen = menuScreen
@@ -606,6 +624,12 @@ func (m model) viewMenu() string {
 
 	menu := lipgloss.JoinVertical(lipgloss.Left, menuItems...)
 
+	// Verbose mode indicator
+	verboseStatus := ""
+	if m.verboseMode {
+		verboseStatus = " • 🔍 Verbose: ON"
+	}
+
 	// Status bar with navigation hints
 	statusBar := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#888")).
@@ -613,7 +637,7 @@ func (m model) viewMenu() string {
 		BorderTop(true).
 		Padding(0, 1).
 		MarginTop(1).
-		Render("Press h or ? for help • ↑↓/jk to navigate • Enter to select")
+		Render("Press h or ? for help • v to toggle verbose • ↑↓/jk to navigate • Enter to select" + verboseStatus)
 
 	// Combine sections vertically centered
 	content := lipgloss.JoinVertical(lipgloss.Center, title, menu, statusBar)
@@ -893,9 +917,9 @@ func initialTestModel() testModel {
 
 // runTestCmd creates a Bubble Tea command to run tests asynchronously
 // Returns a command that executes runTests in a goroutine and sends results via message
-func runTestCmd(specPath, baseURL string, auth *authConfig) tea.Cmd {
+func runTestCmd(specPath, baseURL string, auth *authConfig, verbose bool) tea.Cmd {
 	return func() tea.Msg {
-		results, err := runTests(specPath, baseURL, auth)
+		results, err := runTests(specPath, baseURL, auth, verbose)
 		return testResultMsg{results: results, err: err}
 	}
 }
@@ -1085,8 +1109,8 @@ func generateSampleFromSchema(schema *openapi3.Schema) interface{} {
 
 // runTests executes API tests against endpoints defined in OpenAPI spec
 // Tests each endpoint with a simple request and records results
-// Accepts optional auth configuration for authenticated requests
-func runTests(specPath, baseURL string, auth *authConfig) ([]testResult, error) {
+// Accepts optional auth configuration and verbose flag for detailed logging
+func runTests(specPath, baseURL string, auth *authConfig, verbose bool) ([]testResult, error) {
 	// Load and validate the OpenAPI spec
 	loader := &openapi3.Loader{IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(specPath)
@@ -1125,7 +1149,9 @@ func runTests(specPath, baseURL string, auth *authConfig) ([]testResult, error) 
 				}
 
 				// Test the endpoint and record result
-				status, resp, err := testEndpoint(method, endpoint, requestBody, auth)
+				startTime := time.Now()
+				status, resp, logEntry, err := testEndpoint(method, endpoint, requestBody, auth, verbose)
+				duration := time.Since(startTime)
 				message := "OK"
 				if err != nil {
 					message = err.Error()
@@ -1161,6 +1187,8 @@ func runTests(specPath, baseURL string, auth *authConfig) ([]testResult, error) 
 					endpoint: path,
 					status:   statusStr,
 					message:  message,
+					duration: duration,
+					logEntry: logEntry,
 				})
 			}
 		}
@@ -1269,8 +1297,8 @@ func applyAuth(req *http.Request, auth *authConfig) {
 
 // testEndpoint performs an HTTP request to test an API endpoint
 // Supports GET, POST, PUT, PATCH, DELETE methods with optional request bodies
-// Returns status code, response object, and error
-func testEndpoint(method, url string, body []byte, auth *authConfig) (int, *http.Response, error) {
+// Returns status code, response object, log entry, and error
+func testEndpoint(method, url string, body []byte, auth *authConfig, verbose bool) (int, *http.Response, *logEntry, error) {
 	var req *http.Request
 	var err error
 
@@ -1281,30 +1309,85 @@ func testEndpoint(method, url string, body []byte, auth *authConfig) (int, *http
 		// Create request with body
 		req, err = http.NewRequest(method, url, bytes.NewReader(body))
 		if err != nil {
-			return 0, nil, err
+			return 0, nil, nil, err
 		}
 		req.Header.Set("Content-Type", "application/json")
 	} else {
 		// Create request without body
 		req, err = http.NewRequest(method, url, nil)
 		if err != nil {
-			return 0, nil, err
+			return 0, nil, nil, err
 		}
 	}
 
 	// Apply authentication if configured
 	applyAuth(req, auth)
 
+	// Capture start time for duration measurement
+	startTime := time.Now()
+
 	// Execute request with timeout to prevent hanging
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 	resp, err := client.Do(req)
+	duration := time.Since(startTime)
+
 	if err != nil {
-		return 0, nil, enhanceNetworkError(err, url)
+		return 0, nil, nil, enhanceNetworkError(err, url)
 	}
 
-	return resp.StatusCode, resp, nil
+	// Create log entry if verbose mode is enabled
+	var log *logEntry
+	if verbose {
+		log = &logEntry{
+			requestURL:  url,
+			duration:    duration,
+			timestamp:   startTime,
+			requestHeaders: make(map[string]string),
+			responseHeaders: make(map[string]string),
+		}
+
+		// Capture request headers
+		for k, v := range req.Header {
+			if len(v) > 0 {
+				log.requestHeaders[k] = v[0]
+			}
+		}
+
+		// Capture request body
+		if len(body) > 0 {
+			log.requestBody = string(body)
+			// Truncate if too large
+			if len(log.requestBody) > 500 {
+				log.requestBody = log.requestBody[:500] + "... (truncated)"
+			}
+		}
+
+		// Capture response headers
+		for k, v := range resp.Header {
+			if len(v) > 0 {
+				log.responseHeaders[k] = v[0]
+			}
+		}
+
+		// Capture response body (read and restore)
+		if resp.Body != nil {
+			bodyBytes, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if err == nil {
+				log.responseBody = string(bodyBytes)
+				// Truncate if too large
+				if len(log.responseBody) > 500 {
+					log.responseBody = log.responseBody[:500] + "... (truncated)"
+				}
+				// Restore body for further processing
+				resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+			}
+		}
+	}
+
+	return resp.StatusCode, resp, log, nil
 }
 
 // main initializes and runs the Bubble Tea TUI program
