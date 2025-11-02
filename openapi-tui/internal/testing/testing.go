@@ -18,14 +18,14 @@ import (
 )
 
 // replacePlaceholders replaces path parameters like {id} with sample values
-func replacePlaceholders(path string) string {
+func ReplacePlaceholders(path string) string {
 	// Replace {param} with sensible defaults
 	re := regexp.MustCompile(`\{[^}]+\}`)
 	return re.ReplaceAllString(path, "1")
 }
 
 // buildQueryParams constructs query parameters from operation parameters
-func buildQueryParams(operation *openapi3.Operation) string {
+func BuildQueryParams(operation *openapi3.Operation) string {
 	if operation == nil || operation.Parameters == nil {
 		return ""
 	}
@@ -74,7 +74,7 @@ func buildQueryParams(operation *openapi3.Operation) string {
 
 // generateRequestBody creates a sample JSON request body from an OpenAPI schema
 // Generates realistic sample data based on schema properties, types, and examples
-func generateRequestBody(operation *openapi3.Operation) ([]byte, error) {
+func GenerateRequestBody(operation *openapi3.Operation) ([]byte, error) {
 	if operation == nil || operation.RequestBody == nil {
 		return nil, nil
 	}
@@ -94,7 +94,7 @@ func generateRequestBody(operation *openapi3.Operation) ([]byte, error) {
 	schema := jsonContent.Schema.Value
 
 	// Generate sample data from schema
-	sample := generateSampleFromSchema(schema)
+	sample := GenerateSampleFromSchema(schema)
 	
 	// Marshal to JSON
 	jsonData, err := json.Marshal(sample)
@@ -106,7 +106,7 @@ func generateRequestBody(operation *openapi3.Operation) ([]byte, error) {
 }
 
 // generateSampleFromSchema recursively generates sample data from an OpenAPI schema
-func generateSampleFromSchema(schema *openapi3.Schema) interface{} {
+func GenerateSampleFromSchema(schema *openapi3.Schema) interface{} {
 	if schema == nil {
 		return nil
 	}
@@ -126,7 +126,7 @@ func generateSampleFromSchema(schema *openapi3.Schema) interface{} {
 		obj := make(map[string]interface{})
 		for propName, propRef := range schema.Properties {
 			if propRef != nil && propRef.Value != nil {
-				obj[propName] = generateSampleFromSchema(propRef.Value)
+				obj[propName] = GenerateSampleFromSchema(propRef.Value)
 			}
 		}
 		return obj
@@ -135,7 +135,7 @@ func generateSampleFromSchema(schema *openapi3.Schema) interface{} {
 	if schema.Type.Is("array") {
 		if schema.Items != nil && schema.Items.Value != nil {
 			// Generate a single-item array
-			return []interface{}{generateSampleFromSchema(schema.Items.Value)}
+			return []interface{}{GenerateSampleFromSchema(schema.Items.Value)}
 		}
 		return []interface{}{}
 	}
@@ -182,7 +182,7 @@ func generateSampleFromSchema(schema *openapi3.Schema) interface{} {
 }
 
 // applyAuth applies authentication configuration to an HTTP request
-func applyAuth(req *http.Request, auth *models.AuthConfig) {
+func ApplyAuth(req *http.Request, auth *models.AuthConfig) {
 	if auth == nil || auth.AuthType == "none" || auth.AuthType == "" {
 		return
 	}
@@ -213,7 +213,7 @@ func applyAuth(req *http.Request, auth *models.AuthConfig) {
 // testEndpoint performs an HTTP request to test an API endpoint
 // Supports GET, POST, PUT, PATCH, DELETE methods with optional request bodies
 // Returns status code, response object, log entry, and error
-func testEndpoint(method, url string, body []byte, auth *models.AuthConfig, verbose bool) (int, *http.Response, *models.LogEntry, error) {
+func TestEndpoint(method, url string, body []byte, auth *models.AuthConfig, verbose bool) (int, *http.Response, *models.LogEntry, error) {
 	var req *http.Request
 	var err error
 
@@ -236,7 +236,7 @@ func testEndpoint(method, url string, body []byte, auth *models.AuthConfig, verb
 	}
 
 	// Apply authentication if configured
-	applyAuth(req, auth)
+	ApplyAuth(req, auth)
 
 	// Capture start time for duration measurement
 	startTime := time.Now()
@@ -308,7 +308,7 @@ func testEndpoint(method, url string, body []byte, auth *models.AuthConfig, verb
 // runTests executes API tests against endpoints defined in OpenAPI spec
 // Tests each endpoint with a simple request and records results
 // Accepts optional auth configuration and verbose flag for detailed logging
-func runTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool) ([]models.TestResult, error) {
+func RunTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool) ([]models.TestResult, error) {
 	// Load and validate the OpenAPI spec
 	loader := &openapi3.Loader{IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(specPath)
@@ -324,16 +324,16 @@ func runTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool) (
 			// Iterate through all paths and operations in the spec
 			for method, operation := range pathItem.Operations() {
 				// Construct full endpoint URL with placeholder replacement
-				endpoint := baseURL + replacePlaceholders(path)
+				endpoint := baseURL + ReplacePlaceholders(path)
 				
 				// Add query parameters if defined
-				queryParams := buildQueryParams(operation)
+				queryParams := BuildQueryParams(operation)
 				endpoint += queryParams
 
 				// Generate request body if needed
 				var requestBody []byte
 				if strings.ToUpper(method) == "POST" || strings.ToUpper(method) == "PUT" || strings.ToUpper(method) == "PATCH" {
-					requestBody, err = generateRequestBody(operation)
+					requestBody, err = GenerateRequestBody(operation)
 					if err != nil {
 						// Log error but continue testing
 						results = append(results, models.TestResult{
@@ -348,7 +348,7 @@ func runTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool) (
 
 				// Test the endpoint and record result
 				startTime := time.Now()
-				status, resp, logEntry, err := testEndpoint(method, endpoint, requestBody, auth, verbose)
+				status, resp, logEntry, err := TestEndpoint(method, endpoint, requestBody, auth, verbose)
 				duration := time.Since(startTime)
 				message := "OK"
 				if err != nil {
@@ -399,7 +399,7 @@ func runTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool) (
 // Returns a message containing test results or error
 func RunTestCmd(specPath, baseURL string, auth *models.AuthConfig, verbose bool) tea.Cmd {
 	return func() tea.Msg {
-		results, err := runTests(specPath, baseURL, auth, verbose)
+		results, err := RunTests(specPath, baseURL, auth, verbose)
 		if err != nil {
 			return TestErrorMsg{Err: err}
 		}
