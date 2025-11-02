@@ -607,7 +607,8 @@ flowchart TD
 12. **Custom Requests** ✅ - Manual API testing with full control
 13. **Endpoint Selection** ✅ - Fuzzy search and selective testing
 14. **Configuration UI** ✅ - Form-based settings editor with validation
-15. **Test Coverage** ✅ - 409 tests with 100% core logic coverage
+15. **Test Coverage** ✅ - 409+ tests with 100% core logic coverage
+16. **Test Retry Logic** ✅ - Exponential backoff with configurable retries (0-10, default 3)
 
 **Architecture Updates:**
 - **Package Structure**: Migrated from monolithic 1,794-line file to modular packages
@@ -636,18 +637,24 @@ flowchart TD
 - `r` - View history
 - `l` - View detailed logs
 
-**Test Coverage:** 409 tests passing (100% core logic coverage)
+**Test Coverage:** 409+ tests passing (100% core logic coverage)
 - **config** - 10 tests (configuration save/load)
 - **errors** - 8 tests (enhanced error messages)
 - **export** - 26 tests (JSON/HTML/JUnit export)
-- **testing** - 47 tests (request generation, auth, endpoints)
+- **testing** - 141 tests (request generation, auth, endpoints, retry logic)
 - **validation** - 27 tests (OpenAPI spec & response validation)
 - **Integration** - Full TUI workflow tests
 
-### Remaining Phase 2 Features (1 of 15)
+**Retry Logic Features:**
+- Exponential backoff (delay * 2^attempt)
+- Configurable max retries (0-10, default 3)
+- Configurable retry delay (100-30000ms, default 1000ms)
+- Smart retry detection (network errors, timeouts, 5xx status codes)
+- No retry on client errors (4xx) or successful responses (2xx/3xx)
+- Retry count tracking in test results and exports (JSON, HTML, JUnit)
+- Config editor UI with retry fields and validation
+- Caps prevent excessive delays (max 30s) and retries (max 10)
 
-- **Test Retry Logic** - Automatic retry for flaky endpoints
+**Phase 2 Status:** 100% Complete (15/15 features) ✅🎉
 
-**Phase 2 Status:** 93% Complete (14/15 features) 🚀
-
-This architecture provides a robust, maintainable, and production-ready TUI for OpenAPI testing. The modular structure enables easy feature additions and maintenance. Phase 2 enhancements deliver professional-grade developer experience with comprehensive export formats, historical analysis, parallel execution, CI/CD integration, and extensive test coverage ensuring reliability.
+This architecture provides a robust, maintainable, and production-ready TUI for OpenAPI testing. The modular structure enables easy feature additions and maintenance. Phase 2 enhancements deliver professional-grade developer experience with comprehensive export formats, historical analysis, parallel execution, CI/CD integration, test retry logic with exponential backoff, and extensive test coverage ensuring reliability.
