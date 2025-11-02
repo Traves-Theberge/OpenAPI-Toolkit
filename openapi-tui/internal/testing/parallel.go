@@ -223,3 +223,120 @@ func RunTestParallelCmd(specPath, baseURL string, auth *models.AuthConfig, verbo
 		return TestCompleteMsg{Results: results}
 	}
 }
+
+// RunTestParallelCmdWithSelection executes tests for only selected endpoints
+func RunTestParallelCmdWithSelection(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxConcurrency int, selectedEndpoints []models.EndpointInfo) tea.Cmd {
+	return func() tea.Msg {
+		results, err := RunTestsParallelWithSelection(specPath, baseURL, auth, verbose, maxConcurrency, nil, selectedEndpoints)
+		if err != nil {
+			return TestErrorMsg{Err: err}
+		}
+		return TestCompleteMsg{Results: results}
+	}
+}
+
+// RunTestsParallelWithSelection runs tests for only the selected endpoints
+func RunTestsParallelWithSelection(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxConcurrency int, progressChan chan<- tea.Msg, selectedEndpoints []models.EndpointInfo) ([]models.TestResult, error) {
+	// Load and validate the OpenAPI spec
+	loader := &openapi3.Loader{IsExternalRefsAllowed: true}
+	doc, err := loader.LoadFromFile(specPath)
+	if err != nil {
+		return nil, errors.EnhanceFileError(err, specPath)
+	}
+
+	// Auto-detect concurrency if not specified
+	if maxConcurrency <= 0 {
+		maxConcurrency = runtime.NumCPU()
+		if maxConcurrency > 10 {
+			maxConcurrency = 10
+		}
+	}
+
+	// Create a map of selected endpoints for quick lookup
+	selectedMap := make(map[string]map[string]bool)
+	for _, ep := range selectedEndpoints {
+		if selectedMap[ep.Path] == nil {
+			selectedMap[ep.Path] = make(map[string]bool)
+		}
+		selectedMap[ep.Path][ep.Method] = true
+	}
+
+	// Build job queue with only selected endpoints
+	var jobs []TestJob
+	for path, pathItem := range doc.Paths.Map() {
+		if pathMethods, exists := selectedMap[path]; exists {
+			operations := map[string]*openapi3.Operation{
+				"GET":     pathItem.Get,
+				"POST":    pathItem.Post,
+				"PUT":     pathItem.Put,
+				"PATCH":   pathItem.Patch,
+				"DELETE":  pathItem.Delete,
+				"HEAD":    pathItem.Head,
+				"OPTIONS": pathItem.Options,
+			}
+
+			for method, operation := range operations {
+				if operation != nil && pathMethods[method] {
+					// Generate request body if needed
+					requestBody, _ := GenerateRequestBody(operation)
+
+					// Build full endpoint URL
+					endpoint := baseURL + ReplacePlaceholders(path)
+					queryParams := BuildQueryParams(operation)
+					if queryParams != "" {
+						endpoint += queryParams
+					}
+
+					jobs = append(jobs, TestJob{
+						Method:      method,
+						Path:        path,
+						Endpoint:    endpoint,
+						RequestBody: requestBody,
+						Operation:   operation,
+					})
+				}
+			}
+		}
+	}
+
+	// Execute jobs with worker pool
+	results := make([]models.TestResult, len(jobs))
+	var wg sync.WaitGroup
+	jobChan := make(chan struct {
+		job   TestJob
+		index int
+	}, len(jobs))
+
+	// Send all jobs to channel
+	for i, job := range jobs {
+		jobChan <- struct {
+			job   TestJob
+			index int
+		}{job, i}
+	}
+	close(jobChan)
+
+	// Start workers
+	for i := 0; i < maxConcurrency; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for jobWithIndex := range jobChan {
+				result := executeTestJob(jobWithIndex.job, auth, verbose)
+				results[jobWithIndex.index] = result
+
+				// Send progress update if channel provided
+				if progressChan != nil {
+					progressChan <- TestProgressMsg{
+						Completed: jobWithIndex.index + 1,
+						Total:     len(jobs),
+						Latest:    &result,
+					}
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
+	return results, nil
+}

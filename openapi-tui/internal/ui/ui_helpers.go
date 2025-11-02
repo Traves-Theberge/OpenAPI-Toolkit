@@ -178,3 +178,21 @@ func InitialCustomRequestModel() models.CustomRequestModel {
 		Request:          models.CustomRequest{Headers: make(map[string]string), QueryParams: make(map[string]string), IsCustom: true},
 	}
 }
+
+// InitialEndpointSelectorModel creates and configures the endpoint selector model
+func InitialEndpointSelectorModel() models.EndpointSelectorModel {
+	searchTi := textinput.New()
+	searchTi.Placeholder = "Search endpoints (path, method, tag) or use filters (method:GET, tag:users)"
+	searchTi.CharLimit = 100
+	searchTi.Width = 80
+	searchTi.Focus()
+
+	return models.EndpointSelectorModel{
+		SearchInput:       searchTi,
+		AllEndpoints:      []models.EndpointInfo{},
+		FilteredEndpoints: []models.EndpointInfo{},
+		Cursor:            0,
+		Offset:            0,
+		Ready:             false,
+	}
+}

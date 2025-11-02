@@ -12,27 +12,29 @@ import (
 type Screen int
 
 const (
-MenuScreen Screen = iota
-HelpScreen
-ValidateScreen
-TestScreen
-CustomRequestScreen
-HistoryScreen
+	MenuScreen Screen = iota
+	HelpScreen
+	ValidateScreen
+	TestScreen
+	CustomRequestScreen
+	HistoryScreen
+	EndpointSelectorScreen
 )
 
 // Model is the main application state
 type Model struct {
-Cursor             int
-Screen             Screen
-Width              int
-Height             int
-VerboseMode        bool
-Config             Config
-ValidateModel      ValidateModel
-TestModel          TestModel
-CustomRequestModel CustomRequestModel
-History            *TestHistory
-HistoryIndex       int  // Selected index in history view
+	Cursor                int
+	Screen                Screen
+	Width                 int
+	Height                int
+	VerboseMode           bool
+	Config                Config
+	ValidateModel         ValidateModel
+	TestModel             TestModel
+	CustomRequestModel    CustomRequestModel
+	EndpointSelectorModel EndpointSelectorModel
+	History               *TestHistory
+	HistoryIndex          int  // Selected index in history view
 }
 
 // ValidateModel holds state for the validation screen
@@ -45,24 +47,23 @@ Done      bool
 
 // TestModel holds state for the testing screen
 type TestModel struct {
-Step          int
-SpecInput     textinput.Model
-UrlInput      textinput.Model
-Spinner       spinner.Model
-Table         table.Model
-Results       []TestResult
-Err           error
-Testing       bool
-ExportSuccess string
-ShowingLog    bool
-SelectedLog   int
-FilterActive  bool
-FilterInput   textinput.Model
-FilteredResults []TestResult
-TestStartTime time.Time  // Track when test run started for history
-}
-
-// CustomRequestModel holds state for the custom request screen
+	Step            int
+	SpecInput       textinput.Model
+	UrlInput        textinput.Model
+	Spinner         spinner.Model
+	Table           table.Model
+	Results         []TestResult
+	Err             error
+	Testing         bool
+	ExportSuccess   string
+	ShowingLog      bool
+	SelectedLog     int
+	FilterActive    bool
+	FilterInput     textinput.Model
+	FilteredResults []TestResult
+	TestStartTime   time.Time  // Track when test run started for history
+	SelectEndpoints bool       // Flag to show endpoint selector after getting spec/URL
+}// CustomRequestModel holds state for the custom request screen
 type CustomRequestModel struct {
 Step             int
 MethodInput      textinput.Model
@@ -84,15 +85,35 @@ FilterInput      textinput.Model
 
 // CustomRequest holds a manually created API request
 type CustomRequest struct {
-Method      string
-Endpoint    string
-Headers     map[string]string
-Body        string
-QueryParams map[string]string
-IsCustom    bool // Flag for history tracking
+	Method      string
+	Endpoint    string
+	Headers     map[string]string
+	Body        string
+	QueryParams map[string]string
+	IsCustom    bool // Flag for history tracking
 }
 
-// TestResult represents the result of testing an API endpoint
+// EndpointInfo represents an API endpoint from the OpenAPI spec
+type EndpointInfo struct {
+	Path        string
+	Method      string
+	OperationID string
+	Tags        []string
+	Summary     string
+	Description string
+	Selected    bool  // For checkbox state
+}
+
+// EndpointSelectorModel holds state for the endpoint selector screen
+type EndpointSelectorModel struct {
+	SearchInput       textinput.Model
+	AllEndpoints      []EndpointInfo
+	FilteredEndpoints []EndpointInfo
+	Cursor            int      // Selected item in list
+	Offset            int      // Scroll offset
+	Err               error
+	Ready             bool     // Endpoints loaded and ready
+}// TestResult represents the result of testing an API endpoint
 type TestResult struct {
 Method   string
 Endpoint string

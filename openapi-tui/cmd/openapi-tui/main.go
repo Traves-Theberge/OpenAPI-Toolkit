@@ -50,16 +50,18 @@ func initialModel() model {
 	// Initialize the main application model with default values and loaded config
 	m := model{
 		Model: models.Model{
-			Cursor:        0,
-			Screen:        models.MenuScreen,
-			Width:         80,
-			Height:        24,
-			VerboseMode:   cfg.VerboseMode,
-			Config:        cfg,
-			ValidateModel: ui.InitialValidateModel(),
-			TestModel:     ui.InitialTestModel(),
-			History:       history,
-			HistoryIndex:  0,
+			Cursor:                0,
+			Screen:                models.MenuScreen,
+			Width:                 80,
+			Height:                24,
+			VerboseMode:           cfg.VerboseMode,
+			Config:                cfg,
+			ValidateModel:         ui.InitialValidateModel(),
+			TestModel:             ui.InitialTestModel(),
+			CustomRequestModel:    ui.InitialCustomRequestModel(),
+			EndpointSelectorModel: ui.InitialEndpointSelectorModel(),
+			History:               history,
+			HistoryIndex:          0,
 		},
 	}
 
@@ -98,6 +100,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateTest(msg)
 		case models.CustomRequestScreen:
 			return m.updateCustomRequest(msg)
+		case models.EndpointSelectorScreen:
+			return m.updateEndpointSelector(msg)
 		case models.HistoryScreen:
 			return m.updateHistory(msg)
 		}
@@ -129,7 +133,7 @@ func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.Cursor--
 		}
 	case "down", "j":
-		if m.Cursor < 5 {
+		if m.Cursor < 6 {
 			m.Cursor++
 		}
 	case "h", "?":
@@ -146,20 +150,27 @@ func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.Screen = models.ValidateScreen
 			return m, nil
 		case 1:
+			// Test All Endpoints
 			m.Screen = models.TestScreen
 			return m, nil
 		case 2:
+			// Select & Test Endpoints - need spec path and base URL first
+			m.Screen = models.TestScreen
+			m.TestModel.Step = 0
+			m.TestModel.SelectEndpoints = true  // Flag to show endpoint selector after step 1
+			return m, nil
+		case 3:
 			m.Screen = models.CustomRequestScreen
 			m.CustomRequestModel = ui.InitialCustomRequestModel()
 			return m, nil
-		case 3:
+		case 4:
 			m.Screen = models.HistoryScreen
 			m.HistoryIndex = 0
 			return m, nil
-		case 4:
+		case 5:
 			m.Screen = models.HelpScreen
 			return m, nil
-		case 5:
+		case 6:
 			return m, tea.Quit
 		}
 	}
@@ -263,6 +274,27 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Config.BaseURL = m.TestModel.UrlInput.Value()
 				config.SaveConfig(m.Config)
 
+				// Check if we should show endpoint selector
+				if m.TestModel.SelectEndpoints {
+					// Load endpoints from spec
+					endpoints, err := validation.ExtractEndpoints(m.Config.SpecPath)
+					if err != nil {
+						m.TestModel.Err = fmt.Errorf("failed to load endpoints: %w", err)
+						return m, nil
+					}
+
+					// Initialize endpoint selector
+					m.EndpointSelectorModel = ui.InitialEndpointSelectorModel()
+					m.EndpointSelectorModel.AllEndpoints = endpoints
+					m.EndpointSelectorModel.FilteredEndpoints = endpoints
+					m.EndpointSelectorModel.Ready = true
+
+					// Switch to endpoint selector screen
+					m.Screen = models.EndpointSelectorScreen
+					return m, nil
+				}
+
+				// Normal flow: test all endpoints
 				m.TestModel.Step = 2
 				m.TestModel.Testing = true
 				m.TestModel.TestStartTime = time.Now()
@@ -662,6 +694,121 @@ func (m model) updateCustomRequest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// updateEndpointSelector handles events in the endpoint selector screen
+func (m model) updateEndpointSelector(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			// Cancel and return to menu
+			m.Screen = models.MenuScreen
+			m.EndpointSelectorModel = ui.InitialEndpointSelectorModel()
+			return m, nil
+
+		case tea.KeyEnter:
+			// Confirm selection and start testing
+			if !m.EndpointSelectorModel.Ready {
+				return m, nil
+			}
+
+			selected := validation.GetSelectedEndpoints(m.EndpointSelectorModel.AllEndpoints)
+			if len(selected) == 0 {
+				m.EndpointSelectorModel.Err = fmt.Errorf("no endpoints selected")
+				return m, nil
+			}
+
+			// Update config with spec path
+			m.Config.SpecPath = m.TestModel.SpecInput.Value()
+			m.Config.BaseURL = m.TestModel.UrlInput.Value()
+			config.SaveConfig(m.Config)
+
+			// Move to test screen with spinner
+			m.Screen = models.TestScreen
+			m.TestModel.Step = 2  // Spinner step
+			m.TestModel.Testing = true
+			m.TestModel.Err = nil
+			m.TestModel.TestStartTime = time.Now()
+
+			// Start parallel test execution with selected endpoints
+			return m, testing.RunTestParallelCmdWithSelection(
+				m.Config.SpecPath,
+				m.Config.BaseURL,
+				m.Config.Auth,
+				m.VerboseMode,
+				m.Config.MaxConcurrency,
+				selected,
+			)
+
+		case tea.KeyUp, tea.KeyCtrlP:
+			// Move cursor up
+			if m.EndpointSelectorModel.Cursor > 0 {
+				m.EndpointSelectorModel.Cursor--
+				// Scroll up if needed
+				if m.EndpointSelectorModel.Cursor < m.EndpointSelectorModel.Offset {
+					m.EndpointSelectorModel.Offset = m.EndpointSelectorModel.Cursor
+				}
+			}
+			return m, nil
+
+		case tea.KeyDown, tea.KeyCtrlN:
+			// Move cursor down
+			endpoints := m.EndpointSelectorModel.FilteredEndpoints
+			if len(endpoints) == 0 {
+				endpoints = m.EndpointSelectorModel.AllEndpoints
+			}
+			if m.EndpointSelectorModel.Cursor < len(endpoints)-1 {
+				m.EndpointSelectorModel.Cursor++
+				// Scroll down if needed
+				visibleHeight := 15
+				if m.EndpointSelectorModel.Cursor >= m.EndpointSelectorModel.Offset+visibleHeight {
+					m.EndpointSelectorModel.Offset = m.EndpointSelectorModel.Cursor - visibleHeight + 1
+				}
+			}
+			return m, nil
+
+		case tea.KeyRunes:
+			switch string(msg.Runes) {
+			case " ":
+				// Toggle selection for current endpoint
+				if m.EndpointSelectorModel.Ready {
+					endpoints := &m.EndpointSelectorModel.AllEndpoints
+					if m.EndpointSelectorModel.Cursor < len(*endpoints) {
+						(*endpoints)[m.EndpointSelectorModel.Cursor].Selected = !(*endpoints)[m.EndpointSelectorModel.Cursor].Selected
+					}
+				}
+				return m, nil
+
+			case "a", "A":
+				// Select all
+				m.EndpointSelectorModel.AllEndpoints = validation.SelectAllEndpoints(m.EndpointSelectorModel.AllEndpoints)
+				return m, nil
+
+			case "d", "D":
+				// Deselect all
+				m.EndpointSelectorModel.AllEndpoints = validation.DeselectAllEndpoints(m.EndpointSelectorModel.AllEndpoints)
+				return m, nil
+			}
+		}
+
+		// Update search input
+		m.EndpointSelectorModel.SearchInput, cmd = m.EndpointSelectorModel.SearchInput.Update(msg)
+		
+		// Filter endpoints based on search
+		query := m.EndpointSelectorModel.SearchInput.Value()
+		m.EndpointSelectorModel.FilteredEndpoints = validation.FilterEndpoints(m.EndpointSelectorModel.AllEndpoints, query)
+		
+		// Reset cursor if out of bounds
+		if m.EndpointSelectorModel.Cursor >= len(m.EndpointSelectorModel.FilteredEndpoints) {
+			m.EndpointSelectorModel.Cursor = 0
+			m.EndpointSelectorModel.Offset = 0
+		}
+	}
+
+	return m, cmd
+}
+
 // View renders the current screen based on the application state
 func (m model) View() string {
 	switch m.Screen {
@@ -677,6 +824,8 @@ func (m model) View() string {
 		return ui.ViewCustomRequest(m.Model)
 	case models.HistoryScreen:
 		return ui.ViewHistory(m.Model)
+	case models.EndpointSelectorScreen:
+		return ui.ViewEndpointSelector(m.Model)
 	default:
 		return "Unknown screen"
 	}

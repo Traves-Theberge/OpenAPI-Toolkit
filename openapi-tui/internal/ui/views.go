@@ -25,7 +25,7 @@ func ViewMenu(m models.Model) string {
 
 	// Menu options with styling - highlight selected item
 	var menuItems []string
-	options := []string{"📋 Validate OpenAPI Spec", "🧪 Test API", "✏️  Custom Request", "📜 History", "❓ Help", "👋 Quit"}
+	options := []string{"📋 Validate OpenAPI Spec", "🧪 Test All Endpoints", "🎯 Select & Test Endpoints", "✏️  Custom Request", "📜 History", "❓ Help", "👋 Quit"}
 
 	for i, option := range options {
 		var cursor string
@@ -638,4 +638,182 @@ func ViewCustomRequest(m models.Model) string {
 	}
 
 	return title + "\n\n" + content + errorMsg + instructions
+}
+
+// ViewEndpointSelector renders the endpoint selector screen
+func ViewEndpointSelector(m models.Model) string {
+	esm := m.EndpointSelectorModel
+
+	// Title
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Background(lipgloss.Color("#7D56F4")).
+		Padding(1, 2).
+		MarginBottom(1).
+		Render("🔍 Select Endpoints to Test")
+
+	// Error display
+	if esm.Err != nil {
+		errorMsg := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF6B6B")).
+			Bold(true).
+			Render(fmt.Sprintf("❌ Error: %v", esm.Err))
+		instructions := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("\nEsc: Return to menu")
+		return title + "\n\n" + errorMsg + instructions
+	}
+
+	// Not ready (loading)
+	if !esm.Ready {
+		loading := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#4ECDC4")).
+			Render("Loading endpoints from spec...")
+		return title + "\n\n" + loading
+	}
+
+	// No endpoints found
+	if len(esm.AllEndpoints) == 0 {
+		noEndpoints := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF6B6B")).
+			Render("No endpoints found in OpenAPI spec")
+		instructions := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("\nEsc: Return to menu")
+		return title + "\n\n" + noEndpoints + instructions
+	}
+
+	// Search box
+	searchLabel := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#4ECDC4")).
+		Bold(true).
+		Render("Search: ")
+	searchBox := searchLabel + esm.SearchInput.View()
+
+	// Selected count
+	selectedCount := 0
+	for _, ep := range esm.AllEndpoints {
+		if ep.Selected {
+			selectedCount++
+		}
+	}
+	countStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#888")).
+		MarginTop(1)
+	countText := countStyle.Render(fmt.Sprintf("Selected: %d/%d endpoints", selectedCount, len(esm.AllEndpoints)))
+
+	// Filtered count (if different)
+	var filterInfo string
+	if len(esm.FilteredEndpoints) < len(esm.AllEndpoints) {
+		filterInfo = countStyle.Render(fmt.Sprintf(" | Showing: %d", len(esm.FilteredEndpoints)))
+	}
+
+	// Endpoint list
+	var listItems []string
+	visibleHeight := 15 // Number of visible items
+	endpoints := esm.FilteredEndpoints
+	if len(endpoints) == 0 {
+		endpoints = esm.AllEndpoints
+	}
+
+	// Calculate visible range with scrolling
+	start := esm.Offset
+	end := start + visibleHeight
+	if end > len(endpoints) {
+		end = len(endpoints)
+	}
+
+	for i := start; i < end; i++ {
+		ep := endpoints[i]
+		
+		// Checkbox
+		checkbox := "[ ]"
+		if ep.Selected {
+			checkbox = "[✓]"
+		}
+
+		// Cursor
+		cursor := "  "
+		if i == esm.Cursor {
+			cursor = "▶ "
+		}
+
+		// Method with color
+		var methodStyle lipgloss.Style
+		switch ep.Method {
+		case "GET":
+			methodStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4"))
+		case "POST":
+			methodStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#95E1D3"))
+		case "PUT":
+			methodStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD93D"))
+		case "PATCH":
+			methodStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FAB95B"))
+		case "DELETE":
+			methodStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B"))
+		default:
+			methodStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#888"))
+		}
+		method := methodStyle.Render(fmt.Sprintf("%-7s", ep.Method))
+
+		// Path
+		path := ep.Path
+
+		// Summary (optional)
+		summary := ""
+		if ep.Summary != "" {
+			summary = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#888")).
+				Render(fmt.Sprintf(" - %s", ep.Summary))
+			// Truncate if too long
+			if len(summary) > 60 {
+				summary = summary[:57] + "..."
+			}
+		}
+
+		// Tags (optional)
+		tags := ""
+		if len(ep.Tags) > 0 {
+			tags = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#9B59B6")).
+				Render(fmt.Sprintf(" [%s]", strings.Join(ep.Tags, ", ")))
+		}
+
+		// Build line
+		line := fmt.Sprintf("%s%s %s %s%s%s", cursor, checkbox, method, path, summary, tags)
+		
+		// Highlight selected line
+		if i == esm.Cursor {
+			line = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("#FF6B6B")).
+				Render(line)
+		}
+
+		listItems = append(listItems, line)
+	}
+
+	list := strings.Join(listItems, "\n")
+
+	// Scroll indicators
+	var scrollIndicator string
+	if start > 0 {
+		scrollIndicator += lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("▲ More above\n")
+	}
+	if end < len(endpoints) {
+		scrollIndicator += lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("\n▼ More below")
+	}
+
+	// Instructions
+	instructions := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#888")).
+		MarginTop(1).
+		Render("↑/↓: Navigate | Space: Toggle | a: Select All | d: Deselect All | Enter: Test Selected | Esc: Cancel")
+
+	return title + "\n\n" + searchBox + "\n" + countText + filterInfo + "\n\n" + scrollIndicator + list + scrollIndicator + "\n" + instructions
 }
