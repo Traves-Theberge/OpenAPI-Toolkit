@@ -49,11 +49,13 @@ async function runTests(specPath, baseUrl, options = {}) {
     const results = [];
     let successCount = 0;
     let failureCount = 0;
+    // Parse timeout option
+    const timeoutMs = options.timeout ? parseInt(options.timeout, 10) : 10000;
     // For each path and method, test the endpoint
     for (const [pathStr, methods] of Object.entries(spec.paths)) {
         for (const [method, operation] of Object.entries(methods)) {
             if (typeof operation === 'object' && operation !== null) {
-                const result = await testEndpoint(baseUrl, pathStr, method.toUpperCase(), operation, options.verbose);
+                const result = await testEndpoint(baseUrl, pathStr, method.toUpperCase(), operation, options.verbose, timeoutMs);
                 results.push(result);
                 if (result.success) {
                     successCount++;
@@ -160,7 +162,7 @@ function buildQueryParams(operation) {
     });
     return queryParams.length > 0 ? '?' + queryParams.join('&') : '';
 }
-async function testEndpoint(baseUrl, pathStr, method, operation, verbose = false) {
+async function testEndpoint(baseUrl, pathStr, method, operation, verbose = false, timeout = 10000) {
     // Replace path placeholders like {id} with actual values
     const processedPath = replacePlaceholders(pathStr);
     // Build query parameters
@@ -170,7 +172,7 @@ async function testEndpoint(baseUrl, pathStr, method, operation, verbose = false
         let response;
         const startTime = Date.now();
         const config = {
-            timeout: 10000, // 10 second timeout
+            timeout: timeout, // Configurable timeout
             validateStatus: () => true, // Don't throw on any status code
         };
         switch (method) {

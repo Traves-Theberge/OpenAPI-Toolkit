@@ -32,7 +32,8 @@ program
   .argument('<baseUrl>', 'Base URL of the API to test')
   .option('-e, --export <file>', 'Export results to JSON file')
   .option('-v, --verbose', 'Show verbose output with request/response details')
-  .action(async (spec: string, baseUrl: string, options: { export?: string; verbose?: boolean }) => {
+  .option('-t, --timeout <ms>', 'Request timeout in milliseconds (default: 10000)', '10000')
+  .action(async (spec: string, baseUrl: string, options: { export?: string; verbose?: boolean; timeout?: string }) => {
     try {
       await runTests(spec, baseUrl, options);
       console.log('All tests passed.');

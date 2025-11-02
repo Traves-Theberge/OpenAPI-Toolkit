@@ -70,8 +70,11 @@ openapi-test test path/to/spec.yaml http://api.example.com --verbose
 # Export results to JSON
 openapi-test test path/to/spec.yaml http://api.example.com --export results.json
 
+# Custom timeout (30 seconds)
+openapi-test test path/to/spec.yaml http://api.example.com --timeout 30000
+
 # Combine flags
-openapi-test test path/to/spec.yaml http://api.example.com -v -e results.json
+openapi-test test path/to/spec.yaml http://api.example.com -v -e results.json -t 30000
 ```
 
 **Output Example:**
@@ -179,6 +182,37 @@ openapi-test test spec.yaml http://api.example.com -e results.json
     }
   ]
 }
+```
+
+### Custom Timeout
+
+Configure request timeout for slow APIs or testing timeout behavior:
+
+```bash
+openapi-test test spec.yaml http://api.example.com --timeout 30000
+# or short form:
+openapi-test test spec.yaml http://api.example.com -t 30000
+```
+
+**Parameters:**
+- Timeout value in milliseconds
+- Default: 10000ms (10 seconds)
+- Minimum: 1000ms (1 second) recommended
+- Maximum: No hard limit (use responsibly)
+
+**Use Cases:**
+- **Slow APIs**: Increase timeout for APIs with long response times
+- **Fast APIs**: Decrease timeout to fail fast
+- **Timeout Testing**: Test how your monitoring handles timeouts
+- **Network Issues**: Adjust based on network reliability
+
+**Example:**
+```bash
+# Test with 60-second timeout for slow endpoint
+openapi-test test slow-api.yaml https://slow-api.com -t 60000 -v
+
+# Fast fail with 2-second timeout
+openapi-test test fast-api.yaml https://fast-api.com -t 2000
 ```
 
 ### Enhanced Error Messages

@@ -181,9 +181,26 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 ---
 
-## Phase 3: Future Enhancements 🎯
+## Phase 3: Advanced Features (1 of 15 Complete) 🎯
 
-### 🚀 Planned Features (15 features)
+### ✅ Completed Features (Phase 3)
+
+#### 1. Custom Timeout Configuration
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - `--timeout <ms>` / `-t <ms>` flag
+  - Configurable per-request timeout
+  - Default: 10000ms (10 seconds)
+  - Accepts any positive integer in milliseconds
+  - Applied to all HTTP methods
+- **Files**: `src/cli.ts`, `src/commands/test.ts`
+- **Use Cases**: Slow APIs, fast-fail scenarios, timeout testing, network issues
+- **Documentation**: Updated README with examples and use cases
+
+---
+
+### 🚀 Planned Features (14 remaining)
 
 #### High Priority
 
@@ -193,13 +210,6 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
    - Overall performance improvement
    - **Complexity**: Medium
    - **Impact**: High
-
-2. **Custom Timeout Configuration** ⭐⭐⭐
-   - `--timeout <ms>` flag
-   - Per-request timeout control
-   - Default remains 10 seconds
-   - **Complexity**: Low
-   - **Impact**: Medium
 
 3. **Request Body Generation from Schema** ⭐⭐⭐
    - Generate bodies from schema (not just examples)
