@@ -167,7 +167,7 @@ All Tests:       PASSING ✅
 - Custom request editing
 - And 11+ more features!
 
-## Phase 2: Developer Experience (2 of 15 In Progress) 🚀
+## Phase 2: Developer Experience (3 of 15 Complete) 🚀
 
 ### ✅ Completed Features (Phase 2)
 
@@ -195,11 +195,23 @@ All Tests:       PASSING ✅
 - **Impact**: Developers can now see full HTTP transaction details for debugging
 - **Next**: Display detailed logs in results view (UI enhancement pending)
 
+#### 3. Configuration File Support
+- **Status**: Complete ✅
+- **Implementation**:
+  - `config` struct stores BaseURL, SpecPath, VerboseMode, Auth
+  - `loadConfig()` reads from `~/.config/openapi-tui/config.yaml`
+  - `saveConfig()` persists settings automatically
+  - Auto-save on verbose toggle and test start
+  - Pre-fills inputs from saved config
+  - "Config loaded" indicator in status bar
+- **Impact**: Users don't need to re-enter URLs and paths each session
+- **Config Location**: `~/.config/openapi-tui/config.yaml` (Unix) or `%APPDATA%\openapi-tui\config.yaml` (Windows)
+
 ## Summary
 
 **Phase 1 Status**: ✅ COMPLETE (5/5 features - 100%)
-**Phase 2 Status**: 🚀 IN PROGRESS (2/15 features - 13%)
-**Test Coverage**: 36.9% (from 0%, all tests passing!)
+**Phase 2 Status**: 🚀 IN PROGRESS (3/15 features - 20%)
+**Test Coverage**: 33.3% (all tests passing!)
 **Build Status**: ✅ All tests passing, binary builds successfully
 **Documentation**: ✅ README, ARCHITECTURE, and PROGRESS fully updated
 
