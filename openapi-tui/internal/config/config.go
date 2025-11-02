@@ -28,6 +28,8 @@ func LoadConfig() models.Config {
 cfg := models.Config{
 VerboseMode:    false,
 MaxConcurrency: 0, // 0 = auto-detect
+MaxRetries:     3, // Default: 3 retries
+RetryDelay:     1000, // Default: 1000ms initial delay
 }
 
 configPath, err := GetConfigPath()
@@ -51,6 +53,16 @@ cfg.VerboseMode = fileConfig.VerboseMode
 cfg.MaxConcurrency = fileConfig.MaxConcurrency
 if cfg.MaxConcurrency == 0 {
 cfg.MaxConcurrency = 0 // Keep 0 for auto-detect
+}
+
+// Load retry settings with defaults
+cfg.MaxRetries = fileConfig.MaxRetries
+if cfg.MaxRetries == 0 {
+cfg.MaxRetries = 3 // Default to 3 retries if not specified
+}
+cfg.RetryDelay = fileConfig.RetryDelay
+if cfg.RetryDelay == 0 {
+cfg.RetryDelay = 1000 // Default to 1000ms if not specified
 }
 
 if fileConfig.Auth != nil {
@@ -79,6 +91,8 @@ BaseURL:        cfg.BaseURL,
 SpecPath:       cfg.SpecPath,
 VerboseMode:    cfg.VerboseMode,
 MaxConcurrency: cfg.MaxConcurrency,
+MaxRetries:     cfg.MaxRetries,
+RetryDelay:     cfg.RetryDelay,
 }
 
 if cfg.Auth != nil {

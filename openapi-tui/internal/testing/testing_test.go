@@ -628,7 +628,7 @@ func TestTestEndpoint(t *testing.T) {
 // TestRunTestCmd tests the Bubble Tea command wrapper
 func TestRunTestCmd(t *testing.T) {
 	t.Run("Invalid spec path returns error message", func(t *testing.T) {
-		cmd := RunTestCmd("/nonexistent/spec.yaml", "https://api.example.com", nil, false)
+		cmd := RunTestCmd("/nonexistent/spec.yaml", "https://api.example.com", nil, false, 3, 1000)
 		msg := cmd()
 
 		errMsg, ok := msg.(TestErrorMsg)

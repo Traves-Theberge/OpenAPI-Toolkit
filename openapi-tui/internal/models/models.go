@@ -117,12 +117,13 @@ type EndpointSelectorModel struct {
 	Ready             bool     // Endpoints loaded and ready
 }// TestResult represents the result of testing an API endpoint
 type TestResult struct {
-Method   string
-Endpoint string
-Status   string
-Message  string
-Duration time.Duration
-LogEntry *LogEntry
+Method       string
+Endpoint     string
+Status       string
+Message      string
+Duration     time.Duration
+LogEntry     *LogEntry
+RetryCount   int    // Number of times this request was retried
 }
 
 // LogEntry captures detailed request/response information
@@ -160,6 +161,8 @@ SpecPath       string
 VerboseMode    bool
 Auth           *AuthConfig
 MaxConcurrency int  // Maximum number of concurrent test requests (0 = auto-detect)
+MaxRetries     int  // Maximum number of retry attempts for failed requests (0 = no retries, default: 3)
+RetryDelay     int  // Initial retry delay in milliseconds (default: 1000ms, doubles each retry)
 }
 
 // ConfigFile represents the YAML configuration file structure
@@ -168,6 +171,8 @@ BaseURL        string `yaml:"baseUrl"`
 SpecPath       string `yaml:"specPath"`
 VerboseMode    bool   `yaml:"verboseMode"`
 MaxConcurrency int    `yaml:"maxConcurrency,omitempty"`
+MaxRetries     int    `yaml:"maxRetries,omitempty"`
+RetryDelay     int    `yaml:"retryDelay,omitempty"`
 Auth           *struct {
 Type       string `yaml:"type"`
 Token      string `yaml:"token,omitempty"`

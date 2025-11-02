@@ -33,7 +33,7 @@ type TestProgressMsg struct {
 
 // RunTestsParallel executes API tests concurrently with a worker pool
 // maxConcurrency: maximum number of concurrent requests (0 = auto-detect)
-func RunTestsParallel(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxConcurrency int, progressChan chan<- tea.Msg) ([]models.TestResult, error) {
+func RunTestsParallel(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxConcurrency int, maxRetries int, retryDelay int, progressChan chan<- tea.Msg) ([]models.TestResult, error) {
 	// Load and validate the OpenAPI spec
 	loader := &openapi3.Loader{IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(specPath)
@@ -112,7 +112,7 @@ func RunTestsParallel(specPath, baseURL string, auth *models.AuthConfig, verbose
 		go func() {
 			defer wg.Done()
 			for indexedJob := range jobChan {
-				result := executeTestJob(indexedJob.Job, auth, verbose)
+				result := executeTestJob(indexedJob.Job, auth, verbose, maxRetries, retryDelay)
 				resultChan <- IndexedResult{Index: indexedJob.Index, Result: result}
 				
 				// Send progress update if channel provided
@@ -156,21 +156,22 @@ func RunTestsParallel(specPath, baseURL string, auth *models.AuthConfig, verbose
 	return results, nil
 }
 
-// executeTestJob runs a single test job
-func executeTestJob(job TestJob, auth *models.AuthConfig, verbose bool) models.TestResult {
+// executeTestJob runs a single test job with retry support
+func executeTestJob(job TestJob, auth *models.AuthConfig, verbose bool, maxRetries int, retryDelay int) models.TestResult {
 	// Handle jobs that failed during body generation
 	if job.Operation == nil && job.RequestBody == nil {
 		return models.TestResult{
-			Method:   job.Method,
-			Endpoint: job.Path,
-			Status:   "ERR",
-			Message:  "Failed to generate request body",
+			Method:     job.Method,
+			Endpoint:   job.Path,
+			Status:     "ERR",
+			Message:    "Failed to generate request body",
+			RetryCount: 0,
 		}
 	}
 
-	// Execute the test
+	// Execute the test with retry logic
 	startTime := time.Now()
-	status, resp, logEntry, err := TestEndpoint(job.Method, job.Endpoint, job.RequestBody, auth, verbose)
+	status, resp, logEntry, retryCount, err := TestEndpointWithRetry(job.Method, job.Endpoint, job.RequestBody, auth, verbose, maxRetries, retryDelay)
 	duration := time.Since(startTime)
 
 	message := "OK"
@@ -192,7 +193,11 @@ func executeTestJob(job TestJob, auth *models.AuthConfig, verbose bool) models.T
 				message = validationResult.SchemaErrors[0]
 			}
 		} else if validationResult.StatusValid {
-			message = "OK (validated)"
+			if retryCount > 0 {
+				message = fmt.Sprintf("OK (validated, %d retries)", retryCount)
+			} else {
+				message = "OK (validated)"
+			}
 		}
 	}
 
@@ -203,20 +208,21 @@ func executeTestJob(job TestJob, auth *models.AuthConfig, verbose bool) models.T
 	}
 
 	return models.TestResult{
-		Method:   job.Method,
-		Endpoint: job.Path,
-		Status:   statusStr,
-		Message:  message,
-		Duration: duration,
-		LogEntry: logEntry,
+		Method:     job.Method,
+		Endpoint:   job.Path,
+		Status:     statusStr,
+		Message:    message,
+		Duration:   duration,
+		LogEntry:   logEntry,
+		RetryCount: retryCount,
 	}
 }
 
 // RunTestParallelCmd wraps RunTestsParallel in a Bubble Tea command
 // Uses same interface as RunTestCmd for easy migration
-func RunTestParallelCmd(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxConcurrency int) tea.Cmd {
+func RunTestParallelCmd(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxConcurrency int, maxRetries int, retryDelay int) tea.Cmd {
 	return func() tea.Msg {
-		results, err := RunTestsParallel(specPath, baseURL, auth, verbose, maxConcurrency, nil)
+		results, err := RunTestsParallel(specPath, baseURL, auth, verbose, maxConcurrency, maxRetries, retryDelay, nil)
 		if err != nil {
 			return TestErrorMsg{Err: err}
 		}
@@ -225,9 +231,9 @@ func RunTestParallelCmd(specPath, baseURL string, auth *models.AuthConfig, verbo
 }
 
 // RunTestParallelCmdWithSelection executes tests for only selected endpoints
-func RunTestParallelCmdWithSelection(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxConcurrency int, selectedEndpoints []models.EndpointInfo) tea.Cmd {
+func RunTestParallelCmdWithSelection(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxConcurrency int, maxRetries int, retryDelay int, selectedEndpoints []models.EndpointInfo) tea.Cmd {
 	return func() tea.Msg {
-		results, err := RunTestsParallelWithSelection(specPath, baseURL, auth, verbose, maxConcurrency, nil, selectedEndpoints)
+		results, err := RunTestsParallelWithSelection(specPath, baseURL, auth, verbose, maxConcurrency, maxRetries, retryDelay, nil, selectedEndpoints)
 		if err != nil {
 			return TestErrorMsg{Err: err}
 		}
@@ -236,7 +242,7 @@ func RunTestParallelCmdWithSelection(specPath, baseURL string, auth *models.Auth
 }
 
 // RunTestsParallelWithSelection runs tests for only the selected endpoints
-func RunTestsParallelWithSelection(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxConcurrency int, progressChan chan<- tea.Msg, selectedEndpoints []models.EndpointInfo) ([]models.TestResult, error) {
+func RunTestsParallelWithSelection(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxConcurrency int, maxRetries int, retryDelay int, progressChan chan<- tea.Msg, selectedEndpoints []models.EndpointInfo) ([]models.TestResult, error) {
 	// Load and validate the OpenAPI spec
 	loader := &openapi3.Loader{IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(specPath)
@@ -322,7 +328,7 @@ func RunTestsParallelWithSelection(specPath, baseURL string, auth *models.AuthCo
 		go func() {
 			defer wg.Done()
 			for jobWithIndex := range jobChan {
-				result := executeTestJob(jobWithIndex.job, auth, verbose)
+				result := executeTestJob(jobWithIndex.job, auth, verbose, maxRetries, retryDelay)
 				results[jobWithIndex.index] = result
 
 				// Send progress update if channel provided

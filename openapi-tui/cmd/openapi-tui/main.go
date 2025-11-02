@@ -305,7 +305,7 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.TestModel.Step = 2
 				m.TestModel.Testing = true
 				m.TestModel.TestStartTime = time.Now()
-				return m, testing.RunTestParallelCmd(m.TestModel.SpecInput.Value(), m.TestModel.UrlInput.Value(), nil, m.VerboseMode, m.Config.MaxConcurrency)
+				return m, testing.RunTestParallelCmd(m.TestModel.SpecInput.Value(), m.TestModel.UrlInput.Value(), nil, m.VerboseMode, m.Config.MaxConcurrency, m.Config.MaxRetries, m.Config.RetryDelay)
 			case tea.KeyCtrlC, tea.KeyEsc:
 				m.Screen = models.MenuScreen
 				m.TestModel = ui.InitialTestModel()
@@ -507,7 +507,7 @@ func (m model) updateHistory(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.TestModel.ExportSuccess = ""
 			m.TestModel.TestStartTime = time.Now()
 			
-			return m, testing.RunTestCmd(entry.SpecPath, entry.BaseURL, nil, m.VerboseMode)
+			return m, testing.RunTestCmd(entry.SpecPath, entry.BaseURL, nil, m.VerboseMode, m.Config.MaxRetries, m.Config.RetryDelay)
 		}
 		return m, nil
 	case "ctrl+c", "q":
@@ -921,6 +921,8 @@ func (m model) updateEndpointSelector(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Config.Auth,
 				m.VerboseMode,
 				m.Config.MaxConcurrency,
+				m.Config.MaxRetries,
+				m.Config.RetryDelay,
 				selected,
 			)
 

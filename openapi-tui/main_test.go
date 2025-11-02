@@ -425,7 +425,7 @@ paths:
 	}
 
 	// Run tests
-	results, err := apitesting.RunTests(specPath, server.URL, nil, false)
+	results, err := apitesting.RunTests(specPath, server.URL, nil, false, 3, 1000)
 	if err != nil {
 		t.Fatalf("runTests failed: %v", err)
 	}
@@ -449,7 +449,7 @@ paths:
 
 // TestRunTestsInvalidSpec tests error handling
 func TestRunTestsInvalidSpec(t *testing.T) {
-	_, err := apitesting.RunTests("/nonexistent/spec.yaml", "http://example.com", nil, false)
+	_, err := apitesting.RunTests("/nonexistent/spec.yaml", "http://example.com", nil, false, 3, 1000)
 	if err == nil {
 		t.Error("Expected error for invalid spec but got none")
 	}
@@ -496,7 +496,7 @@ paths:
 	}
 
 	// Run tests
-	results, err := apitesting.RunTests(specPath, server.URL, nil, false)
+	results, err := apitesting.RunTests(specPath, server.URL, nil, false, 3, 1000)
 	if err != nil {
 		t.Fatalf("runTests failed: %v", err)
 	}

@@ -38,7 +38,7 @@ paths:
 	specPath := createTempSpec(t, specContent)
 
 	// Test with maxConcurrency = 0 (auto-detect)
-	results, err := RunTestsParallel(specPath, server.URL, nil, false, 0, nil)
+	results, err := RunTestsParallel(specPath, server.URL, nil, false, 0, 3, 1000, nil)
 	if err != nil {
 		t.Fatalf("RunTestsParallel failed: %v", err)
 	}
@@ -115,7 +115,7 @@ paths:
 	specPath := createTempSpec(t, specContent)
 
 	// Test with maxConcurrency = 2
-	results, err := RunTestsParallel(specPath, server.URL, nil, false, 2, nil)
+	results, err := RunTestsParallel(specPath, server.URL, nil, false, 2, 3, 1000, nil)
 	if err != nil {
 		t.Fatalf("RunTestsParallel failed: %v", err)
 	}
@@ -168,7 +168,7 @@ paths:
 `
 	specPath := createTempSpec(t, specContent)
 
-	results, err := RunTestsParallel(specPath, server.URL, nil, false, 3, nil)
+	results, err := RunTestsParallel(specPath, server.URL, nil, false, 3, 3, 1000, nil)
 	if err != nil {
 		t.Fatalf("RunTestsParallel failed: %v", err)
 	}
@@ -226,7 +226,9 @@ paths:
 `
 	specPath := createTempSpec(t, specContent)
 
-	results, err := RunTestsParallel(specPath, server.URL, nil, false, 2, nil)
+	// Use shorter retry delay (100ms) to avoid test timeouts
+	// Server will consistently return 500, so retries won't help but will execute
+	results, err := RunTestsParallel(specPath, server.URL, nil, false, 2, 3, 100, nil)
 	if err != nil {
 		t.Fatalf("RunTestsParallel failed: %v", err)
 	}
@@ -242,7 +244,8 @@ paths:
 		// Check if status is "200" for success or "500" for error
 		if result.Status == "200" {
 			successCount++
-		} else if result.Status == "500" {
+		} else if result.Status == "500" || result.Status == "ERR" {
+			// Accept both "500" (status code) and "ERR" (error after retries)
 			failureCount++
 		}
 	}
@@ -296,7 +299,7 @@ paths:
 
 	// Run multiple times to increase chance of detecting races
 	for i := 0; i < 10; i++ {
-		_, err := RunTestsParallel(specPath, server.URL, nil, false, 3, nil)
+		_, err := RunTestsParallel(specPath, server.URL, nil, false, 3, 3, 1000, nil)
 		if err != nil {
 			t.Fatalf("Iteration %d: RunTestsParallel failed: %v", i, err)
 		}
@@ -325,7 +328,7 @@ paths:
 	specPath := createTempSpec(t, specContent)
 
 	// Execute the command
-	cmd := RunTestParallelCmd(specPath, server.URL, nil, false, 2)
+	cmd := RunTestParallelCmd(specPath, server.URL, nil, false, 2, 3, 1000)
 	msg := cmd()
 
 	// Verify message type
@@ -405,7 +408,7 @@ paths:
 	specPath := createTempSpec(t, specContent)
 
 	// Run with 3 workers
-	results, err := RunTestsParallel(specPath, server.URL, nil, false, 3, nil)
+	results, err := RunTestsParallel(specPath, server.URL, nil, false, 3, 3, 1000, nil)
 	if err != nil {
 		t.Fatalf("RunTestsParallel failed: %v", err)
 	}
@@ -455,7 +458,7 @@ paths:
 	progressChan := make(chan tea.Msg, 10)
 
 	// Run tests with progress tracking
-	_, err := RunTestsParallel(specPath, server.URL, nil, false, 2, progressChan)
+	_, err := RunTestsParallel(specPath, server.URL, nil, false, 2, 3, 1000, progressChan)
 	if err != nil {
 		t.Fatalf("RunTestsParallel failed: %v", err)
 	}

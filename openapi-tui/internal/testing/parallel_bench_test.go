@@ -24,12 +24,14 @@ func BenchmarkSequentialExecution(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := RunTests(specPath, server.URL, nil, false)
+		_, err := RunTests(specPath, server.URL, nil, false, 3, 1000)
 		if err != nil {
 			b.Fatalf("RunTests failed: %v", err)
 		}
 	}
 }
+
+// BenchmarkRunTestsParallel tests parallel execution performance
 
 // BenchmarkParallelExecution benchmarks the new parallel test execution
 func BenchmarkParallelExecution(b *testing.B) {
@@ -46,7 +48,7 @@ func BenchmarkParallelExecution(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := RunTestsParallel(specPath, server.URL, nil, false, 0, nil)
+		_, err := RunTestsParallel(specPath, server.URL, nil, false, 0, 3, 1000, nil)
 		if err != nil {
 			b.Fatalf("RunTestsParallel failed: %v", err)
 		}
@@ -69,7 +71,7 @@ func BenchmarkParallelExecution_CustomConcurrency(b *testing.B) {
 		b.Run(fmt.Sprintf("Concurrency%d", concurrency), func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				_, err := RunTestsParallel(specPath, server.URL, nil, false, concurrency, nil)
+				_, err := RunTestsParallel(specPath, server.URL, nil, false, concurrency, 3, 1000, nil)
 				if err != nil {
 					b.Fatalf("RunTestsParallel failed: %v", err)
 				}
@@ -93,7 +95,7 @@ func BenchmarkScaling(b *testing.B) {
 		b.Run(fmt.Sprintf("Sequential_%dEndpoints", endpointCount), func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				_, err := RunTests(specPath, server.URL, nil, false)
+				_, err := RunTests(specPath, server.URL, nil, false, 3, 1000)
 				if err != nil {
 					b.Fatalf("RunTests failed: %v", err)
 				}
@@ -103,7 +105,7 @@ func BenchmarkScaling(b *testing.B) {
 		b.Run(fmt.Sprintf("Parallel_%dEndpoints", endpointCount), func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				_, err := RunTestsParallel(specPath, server.URL, nil, false, 0, nil)
+				_, err := RunTestsParallel(specPath, server.URL, nil, false, 0, 3, 1000, nil)
 				if err != nil {
 					b.Fatalf("RunTestsParallel failed: %v", err)
 				}

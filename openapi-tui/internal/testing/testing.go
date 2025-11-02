@@ -307,8 +307,8 @@ func TestEndpoint(method, url string, body []byte, auth *models.AuthConfig, verb
 
 // runTests executes API tests against endpoints defined in OpenAPI spec
 // Tests each endpoint with a simple request and records results
-// Accepts optional auth configuration and verbose flag for detailed logging
-func RunTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool) ([]models.TestResult, error) {
+// Accepts optional auth configuration, verbose flag, and retry configuration
+func RunTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxRetries int, retryDelay int) ([]models.TestResult, error) {
 	// Load and validate the OpenAPI spec
 	loader := &openapi3.Loader{IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(specPath)
@@ -337,18 +337,19 @@ func RunTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool) (
 					if err != nil {
 						// Log error but continue testing
 						results = append(results, models.TestResult{
-							Method:   method,
-							Endpoint: path,
-							Status:   "ERR",
-							Message:  fmt.Sprintf("Failed to generate request body: %v", err),
+							Method:     method,
+							Endpoint:   path,
+							Status:     "ERR",
+							Message:    fmt.Sprintf("Failed to generate request body: %v", err),
+							RetryCount: 0,
 						})
 						continue
 					}
 				}
 
-				// Test the endpoint and record result
+				// Test the endpoint with retry logic
 				startTime := time.Now()
-				status, resp, logEntry, err := TestEndpoint(method, endpoint, requestBody, auth, verbose)
+				status, resp, logEntry, retryCount, err := TestEndpointWithRetry(method, endpoint, requestBody, auth, verbose, maxRetries, retryDelay)
 				duration := time.Since(startTime)
 				message := "OK"
 				if err != nil {
@@ -370,6 +371,9 @@ func RunTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool) (
 						}
 					} else if validationResult.StatusValid {
 						message = "OK (validated)"
+						if retryCount > 0 {
+							message = fmt.Sprintf("OK (validated, %d retries)", retryCount)
+						}
 					}
 				}
 
@@ -381,12 +385,13 @@ func RunTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool) (
 
 				// Add result to collection
 				results = append(results, models.TestResult{
-					Method:   method,
-					Endpoint: path,
-					Status:   statusStr,
-					Message:  message,
-					Duration: duration,
-					LogEntry: logEntry,
+					Method:     method,
+					Endpoint:   path,
+					Status:     statusStr,
+					Message:    message,
+					Duration:   duration,
+					LogEntry:   logEntry,
+					RetryCount: retryCount,
 				})
 			}
 		}
@@ -397,9 +402,9 @@ func RunTests(specPath, baseURL string, auth *models.AuthConfig, verbose bool) (
 
 // runTestCmd wraps runTests in a Bubble Tea command
 // Returns a message containing test results or error
-func RunTestCmd(specPath, baseURL string, auth *models.AuthConfig, verbose bool) tea.Cmd {
+func RunTestCmd(specPath, baseURL string, auth *models.AuthConfig, verbose bool, maxRetries int, retryDelay int) tea.Cmd {
 	return func() tea.Msg {
-		results, err := RunTests(specPath, baseURL, auth, verbose)
+		results, err := RunTests(specPath, baseURL, auth, verbose, maxRetries, retryDelay)
 		if err != nil {
 			return TestErrorMsg{Err: err}
 		}
