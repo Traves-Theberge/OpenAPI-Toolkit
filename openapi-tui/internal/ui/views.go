@@ -296,7 +296,7 @@ func ViewTest(m models.Model) string {
 			}
 		}
 		// Add instructions
-		instructions := "Press 'f' to filter | 'e' JSON | 'h' HTML | 'j' JUnit XML | 'r' history"
+		instructions := "Press 'v' toggle verbose | 'f' filter | 'e' JSON | 'h' HTML | 'j' JUnit XML | 'r' history"
 		if m.VerboseMode {
 			instructions += " | 'l' logs"
 		}

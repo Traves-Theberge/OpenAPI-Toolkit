@@ -375,6 +375,12 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 			
 			// Normal key handling when filter is not active
 			switch msg.String() {
+			case "v":
+				// Toggle verbose mode
+				m.VerboseMode = !m.VerboseMode
+				m.Config.VerboseMode = m.VerboseMode
+				config.SaveConfig(m.Config)
+				return m, nil
 			case "f":
 				// Toggle filter mode
 				m.TestModel.FilterActive = !m.TestModel.FilterActive
