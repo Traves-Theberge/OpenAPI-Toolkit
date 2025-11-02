@@ -170,6 +170,17 @@ After running tests, export results in multiple formats:
 - Track API health trends over time
 - Persistent storage in `~/.config/openapi-tui/history.json`
 
+## 📚 Documentation
+
+For comprehensive guides and documentation:
+
+- **[Complete User Guide](docs/USER-GUIDE.md)** - End-to-end guide with real-world workflows
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and components
+- **[Progress Tracking](docs/PROGRESS.md)** - Feature roadmap and status
+- **[Testing Guide](docs/TESTING-GUIDE.md)** - Testing procedures
+
+---
+
 ## 🏗️ Architecture
 
 Built with industry-standard libraries:

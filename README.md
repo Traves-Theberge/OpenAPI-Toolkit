@@ -109,13 +109,16 @@ go build
 
 ### CLI Documentation
 - [CLI README](openapi-cli/README.md) - Complete CLI documentation
+- [User Guide](openapi-cli/docs/USER-GUIDE.md) - End-to-end guide with real-world examples
 - [Architecture Guide](openapi-cli/docs/ARCHITECTURE.md) - System design and component architecture
 - [Progress Tracking](openapi-cli/docs/PROGRESS.md) - Feature roadmap and development status
 - [Testing Guide](openapi-cli/docs/TESTING-GUIDE.md) - Comprehensive testing procedures
 
 ### TUI Documentation
-- [TUI README](openapi-tui/README.md) - TUI user guide
+- [TUI README](openapi-tui/README.md) - Complete TUI documentation
+- [User Guide](openapi-tui/docs/USER-GUIDE.md) - End-to-end guide with real-world workflows
 - [Architecture Guide](openapi-tui/docs/ARCHITECTURE.md) - System design with Mermaid diagrams
+- [Progress Tracking](openapi-tui/docs/PROGRESS.md) - Feature roadmap and development status
 - [Testing Guide](openapi-tui/docs/TESTING-GUIDE.md) - Step-by-step testing instructions
 
 ## 🎨 Features Showcase
