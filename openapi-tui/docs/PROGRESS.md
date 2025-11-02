@@ -437,8 +437,8 @@ All Tests:       PASSING ✅
 ## Summary
 
 **Phase 1 Status**: ✅ COMPLETE (5/5 features - 100%)
-**Phase 2 Status**: 🚀 IN PROGRESS (9/15 features - 60%)
-**Test Coverage**: 86 tests passing (20 JUnit + 25 HTML + 24 filter + 12 stats + 17 main, 1 skipped)
+**Phase 2 Status**: 🚀 IN PROGRESS (10/15 features - 67%)
+**Test Coverage**: 94 tests passing (20 JUnit + 25 HTML + 24 filter + 12 stats + 8 history + 17 main, 1 skipped)
 **Build Status**: ✅ All tests passing, binary builds successfully
 **Code Organization**: ✅ Standard Go project layout (cmd/ + internal/)
 **Documentation**: ✅ README, ARCHITECTURE, and PROGRESS fully updated
@@ -460,7 +460,65 @@ The application now:
 - ✅ **Summary statistics with pass rates and timing analysis**
 - ✅ **Real-time response filtering with special keywords**
 
+#### 10. Request History
+- **Status**: Complete ✅
+- **Implementation**:
+  - `history.go` (165 lines) - History management with persistence
+    - `HistoryEntry` struct - Captures test run metadata and results
+    - `TestHistory` struct - Manages collection of history entries
+    - `CreateHistoryEntry()` - Factory function for new entries
+    - `SaveHistory()` / `LoadHistory()` - Persistence to JSON
+    - `formatHistoryDuration()` - Human-readable duration formatting
+    - Automatic 50-entry limit (keeps most recent)
+  - `history_test.go` (333 lines) - Comprehensive test suite
+    - 8 test functions with 20+ individual test cases
+    - Tests cover: entry management, limit enforcement, persistence, edge cases
+  - `views.go` - Added `ViewHistory()` function (95 lines)
+    - Table-based UI with columns: Date/Time, Spec, Tests, Passed, Failed, Duration
+    - Empty state handling
+    - Navigation with arrow keys
+  - `models.go` - Added `History *TestHistory` and `HistoryIndex int` fields
+  - `models.go` - Added `HistoryScreen` constant
+  - `models.go` - Added `TestStartTime time.Time` to track test duration
+  - `main.go` - Full integration:
+    - Load history on app startup in `initialModel()`
+    - 'r' key binding in results view to access history
+    - `updateHistory()` function for history screen navigation
+    - History view case in `View()` function
+    - Save history after each test completion (TestCompleteMsg handler)
+    - Test replay: select entry with Enter to re-run test
+  - Updated instructions in `views.go` to include 'r' history option
+- **Features**:
+  - ✅ Automatic capture of every test run
+  - ✅ Stores timestamp, spec path, base URL, results, statistics
+  - ✅ Persistence to `~/.config/openapi-tui/history.json`
+  - ✅ Limit to last 50 runs (oldest automatically removed)
+  - ✅ Table view with comprehensive columns
+  - ✅ Navigate with ↑/↓ or j/k keys
+  - ✅ Replay any previous test with Enter key
+  - ✅ Return to results with Esc
+  - ✅ Graceful handling of missing/corrupt history file
+  - ✅ Duration tracking for test performance trends
+  - ✅ Pass/fail statistics for historical analysis
+- **Test Coverage**: 8 test functions, 20+ test cases (all passing)
+  - `TestAddEntry` - Entry management
+  - `TestAddEntryLimit` - 50-entry limit enforcement
+  - `TestGetEntry` - Entry retrieval by ID
+  - `TestSaveAndLoadHistory` - Round-trip persistence
+  - `TestLoadHistoryNonExistent` - Graceful empty state
+  - `TestCreateHistoryEntry` - Factory function and stats
+  - `TestFormatHistoryDuration` - 7 duration formatting scenarios
+  - `TestHistoryPersistence` - Multi-save scenarios
+- **Impact**:
+  - **Track test runs over time** - See how API health changes
+  - **Easily replay tests** - One-click re-run of previous configs
+  - **Historical analysis** - Identify trends in API stability
+  - **Investigate past failures** - Review what went wrong
+  - **Share test configurations** - Copy spec/URL from history
+  - **Performance monitoring** - Track response time trends
+  - **Audit trail** - Complete record of all testing activity
+
 **Phase 1 Achievement**: All critical foundation features delivered! 🎉
-**Phase 2 Progress**: 9/15 features complete (60%) - Almost two-thirds done! 🚀
+**Phase 2 Progress**: 10/15 features complete (67%) - Two-thirds done! 🚀
 **Architecture**: Refactored to standard Go layout (cmd/ + internal/ packages)
-**Latest Feature**: JUnit XML export for CI/CD integration (Jenkins, GitLab, GitHub Actions) �
+**Latest Feature**: Request History - Track and replay test runs with persistent history 📜

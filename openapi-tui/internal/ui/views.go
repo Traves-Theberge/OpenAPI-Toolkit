@@ -296,7 +296,7 @@ func ViewTest(m models.Model) string {
 			}
 		}
 		// Add instructions
-		instructions := "Press 'f' to filter | 'e' JSON | 'h' HTML | 'j' JUnit XML"
+		instructions := "Press 'f' to filter | 'e' JSON | 'h' HTML | 'j' JUnit XML | 'r' history"
 		if m.VerboseMode {
 			instructions += " | 'l' logs"
 		}
@@ -392,4 +392,93 @@ func ViewLogDetail(m models.Model, result models.TestResult, log *models.LogEntr
 		Render("Press Esc or Enter to return to results")
 	
 	return title + "\n\n" + requestSection + responseSection + footer
+}
+
+// ViewHistory renders the test run history screen
+func ViewHistory(m models.Model) string {
+	titleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Background(lipgloss.Color("#7D56F4")).
+		Padding(1, 2).
+		MarginBottom(1)
+
+	title := titleStyle.Render("📜 Test Run History")
+
+	if len(m.History.Entries) == 0 {
+		emptyStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Italic(true).
+			Padding(2)
+		
+		empty := emptyStyle.Render("No test history yet. Run some tests to see them here!")
+		
+		footer := "\n\n" + lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("Press Esc to return")
+		
+		return title + "\n\n" + empty + footer
+	}
+
+	// Create table for history entries
+	columns := []table.Column{
+		{Title: "Date & Time", Width: 20},
+		{Title: "Spec", Width: 25},
+		{Title: "Tests", Width: 12},
+		{Title: "Passed", Width: 8},
+		{Title: "Failed", Width: 8},
+		{Title: "Duration", Width: 12},
+	}
+
+	rows := []table.Row{}
+	for _, entry := range m.History.Entries {
+		timestamp := entry.Timestamp.Format("2006-01-02 15:04:05")
+		
+		// Truncate spec path if too long
+		spec := entry.SpecPath
+		if len(spec) > 23 {
+			spec = "..." + spec[len(spec)-20:]
+		}
+		
+		tests := fmt.Sprintf("%d", entry.TotalTests)
+		passed := fmt.Sprintf("%d", entry.Passed)
+		failed := fmt.Sprintf("%d", entry.Failed)
+		
+		rows = append(rows, table.Row{
+			timestamp,
+			spec,
+			tests,
+			passed,
+			failed,
+			entry.Duration,
+		})
+	}
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithFocused(true),
+		table.WithHeight(10),
+	)
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(true).
+		Foreground(lipgloss.Color("#7D56F4"))
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Background(lipgloss.Color("#7D56F4")).
+		Bold(false)
+	t.SetStyles(s)
+
+	// Instructions
+	instructions := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#888")).
+		MarginTop(1).
+		Render("↑/↓: Navigate | Enter: Replay selected test | Esc: Return to results")
+
+	return title + "\n\n" + t.View() + "\n\n" + instructions
 }

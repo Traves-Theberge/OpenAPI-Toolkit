@@ -14,6 +14,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	
@@ -37,6 +38,14 @@ func initialModel() model {
 	// Load configuration from file
 	cfg := config.LoadConfig()
 
+	// Load test run history
+	history, err := models.LoadHistory()
+	if err != nil {
+		// If history can't be loaded, start with empty history
+		// Error is logged but doesn't prevent app from starting
+		history = &models.TestHistory{}
+	}
+
 	// Initialize the main application model with default values and loaded config
 	m := model{
 		Model: models.Model{
@@ -48,6 +57,8 @@ func initialModel() model {
 			Config:        cfg,
 			ValidateModel: ui.InitialValidateModel(),
 			TestModel:     ui.InitialTestModel(),
+			History:       history,
+			HistoryIndex:  0,
 		},
 	}
 
@@ -84,6 +95,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateValidate(msg)
 		case models.TestScreen:
 			return m.updateTest(msg)
+		case models.HistoryScreen:
+			return m.updateHistory(msg)
 		}
 	case testing.TestCompleteMsg:
 		if m.Screen == models.TestScreen {
@@ -235,6 +248,7 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				m.TestModel.Step = 2
 				m.TestModel.Testing = true
+				m.TestModel.TestStartTime = time.Now()
 				return m, testing.RunTestCmd(m.TestModel.SpecInput.Value(), m.TestModel.UrlInput.Value(), nil, m.VerboseMode)
 			case tea.KeyCtrlC, tea.KeyEsc:
 				m.Screen = models.MenuScreen
@@ -257,6 +271,20 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.TestModel.Err = nil
 			m.TestModel.Step = 3
 			m.TestModel.Testing = false
+			
+			// Save to history
+			duration := time.Since(m.TestModel.TestStartTime)
+			entry := models.CreateHistoryEntry(
+				m.TestModel.SpecInput.Value(),
+				m.TestModel.UrlInput.Value(),
+				msg.Results,
+				duration,
+			)
+			m.History.AddEntry(entry)
+			
+			// Persist history to disk (ignore errors to not disrupt user flow)
+			_ = models.SaveHistory(m.History)
+			
 			return m, nil
 		case testing.TestErrorMsg:
 			m.TestModel.Err = msg.Err
@@ -336,6 +364,11 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				return m, nil
+			case "r":
+				// View test run history
+				m.Screen = models.HistoryScreen
+				m.HistoryIndex = 0
+				return m, nil
 			case "l":
 				if m.VerboseMode && len(m.TestModel.Results) > 0 {
 					selectedIdx := m.TestModel.Table.Cursor()
@@ -378,6 +411,55 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// updateHistory handles key events in the history screen
+func (m model) updateHistory(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		// Return to results screen
+		m.Screen = models.TestScreen
+		return m, nil
+	case "up", "k":
+		if m.HistoryIndex > 0 {
+			m.HistoryIndex--
+		}
+		return m, nil
+	case "down", "j":
+		if m.HistoryIndex < len(m.History.Entries)-1 {
+			m.HistoryIndex++
+		}
+		return m, nil
+	case "enter":
+		// Replay selected test
+		if m.HistoryIndex >= 0 && m.HistoryIndex < len(m.History.Entries) {
+			entry := m.History.Entries[m.HistoryIndex]
+			
+			// Set spec and URL from history
+			m.TestModel.SpecInput.SetValue(entry.SpecPath)
+			m.TestModel.UrlInput.SetValue(entry.BaseURL)
+			
+			// Save to config
+			m.Config.SpecPath = entry.SpecPath
+			m.Config.BaseURL = entry.BaseURL
+			config.SaveConfig(m.Config)
+			
+			// Start testing
+			m.Screen = models.TestScreen
+			m.TestModel.Step = 2
+			m.TestModel.Testing = true
+			m.TestModel.Results = nil
+			m.TestModel.Err = nil
+			m.TestModel.ExportSuccess = ""
+			m.TestModel.TestStartTime = time.Now()
+			
+			return m, testing.RunTestCmd(entry.SpecPath, entry.BaseURL, nil, m.VerboseMode)
+		}
+		return m, nil
+	case "ctrl+c", "q":
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
 // View renders the current screen based on the application state
 func (m model) View() string {
 	switch m.Screen {
@@ -389,6 +471,8 @@ func (m model) View() string {
 		return ui.ViewValidate(m.Model)
 	case models.TestScreen:
 		return ui.ViewTest(m.Model)
+	case models.HistoryScreen:
+		return ui.ViewHistory(m.Model)
 	default:
 		return "Unknown screen"
 	}

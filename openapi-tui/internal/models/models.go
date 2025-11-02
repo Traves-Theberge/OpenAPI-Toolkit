@@ -16,6 +16,7 @@ MenuScreen Screen = iota
 HelpScreen
 ValidateScreen
 TestScreen
+HistoryScreen
 )
 
 // Model is the main application state
@@ -28,6 +29,8 @@ VerboseMode   bool
 Config        Config
 ValidateModel ValidateModel
 TestModel     TestModel
+History       *TestHistory
+HistoryIndex  int  // Selected index in history view
 }
 
 // ValidateModel holds state for the validation screen
@@ -54,6 +57,7 @@ SelectedLog   int
 FilterActive  bool
 FilterInput   textinput.Model
 FilteredResults []TestResult
+TestStartTime time.Time  // Track when test run started for history
 }
 
 // TestResult represents the result of testing an API endpoint
