@@ -30,6 +30,7 @@ interface TestOptions {
   authHeader?: string;
   authQuery?: string;
   authBasic?: string;
+  header?: string[];
 }
 
 export async function runTests(specPath: string, baseUrl: string, options: TestOptions = {}): Promise<void> {
@@ -208,6 +209,18 @@ async function testEndpoint(
     if (authOptions.authBasic) {
       const encoded = Buffer.from(authOptions.authBasic).toString('base64');
       headers['Authorization'] = `Basic ${encoded}`;
+    }
+
+    // Custom headers
+    if (authOptions.header && authOptions.header.length > 0) {
+      for (const headerStr of authOptions.header) {
+        const colonIndex = headerStr.indexOf(':');
+        if (colonIndex > 0) {
+          const name = headerStr.substring(0, colonIndex).trim();
+          const value = headerStr.substring(colonIndex + 1).trim();
+          headers[name] = value;
+        }
+      }
     }
 
     const config = {

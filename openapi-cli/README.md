@@ -18,6 +18,7 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **Enhanced Error Messages** - Actionable suggestions for fixing validation errors
 - **Authentication Support** - Bearer tokens, API keys (header/query), and Basic authentication
 - **Custom Timeouts** - Configurable request timeouts for slow APIs or fast-fail scenarios
+- **Custom Headers** - Add custom HTTP headers to all requests (repeatable -H flag)
 
 ## Installation
 
@@ -92,6 +93,9 @@ openapi-test test path/to/spec.yaml http://api.example.com --auth-api-key YOUR_K
 
 # Basic authentication
 openapi-test test path/to/spec.yaml http://api.example.com --auth-basic username:password
+
+# Custom headers (repeatable)
+openapi-test test path/to/spec.yaml http://api.example.com -H "X-Custom-Header: Value" -H "X-Another: Value2"
 ```
 
 **Output Example:**
@@ -306,6 +310,51 @@ openapi-test test spec.yaml https://api.example.com \
 - Never commit credentials to version control
 - Use environment variables for sensitive data
 - Credentials are only sent to the specified base URL
+
+### Custom Headers
+
+Add custom HTTP headers to all requests:
+
+```bash
+# Single custom header
+openapi-test test spec.yaml https://api.example.com -H "X-Request-ID: 12345"
+
+# Multiple custom headers (repeatable flag)
+openapi-test test spec.yaml https://api.example.com \
+  -H "X-Request-ID: 12345" \
+  -H "X-Client-Version: 1.0.0" \
+  -H "X-Environment: staging"
+
+# Override default headers
+openapi-test test spec.yaml https://api.example.com -H "Content-Type: application/xml"
+```
+
+**Header Format:**
+- Format: `"Name: Value"`
+- Separate name and value with a colon
+- Whitespace around colon is trimmed
+- Case-sensitive header names
+
+**Use Cases:**
+- Request tracking (X-Request-ID, X-Correlation-ID)
+- Client identification (User-Agent, X-Client-Version)
+- Feature flags (X-Feature-Enabled)
+- A/B testing (X-Variant)
+- Content negotiation (Accept, Content-Type)
+
+**Combined with Authentication:**
+```bash
+# Custom headers + Bearer token
+openapi-test test spec.yaml https://api.example.com \
+  --auth-bearer $TOKEN \
+  -H "X-Request-ID: req-123" \
+  -H "X-Client: CLI-Tester"
+```
+
+**Notes:**
+- Custom headers are applied to all requests
+- Later headers override earlier ones if the same name is used
+- Authentication headers take precedence over custom headers
 
 ### Enhanced Error Messages
 

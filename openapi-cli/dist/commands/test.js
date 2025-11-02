@@ -192,6 +192,17 @@ async function testEndpoint(baseUrl, pathStr, method, operation, verbose = false
             const encoded = Buffer.from(authOptions.authBasic).toString('base64');
             headers['Authorization'] = `Basic ${encoded}`;
         }
+        // Custom headers
+        if (authOptions.header && authOptions.header.length > 0) {
+            for (const headerStr of authOptions.header) {
+                const colonIndex = headerStr.indexOf(':');
+                if (colonIndex > 0) {
+                    const name = headerStr.substring(0, colonIndex).trim();
+                    const value = headerStr.substring(colonIndex + 1).trim();
+                    headers[name] = value;
+                }
+            }
+        }
         const config = {
             timeout: timeout, // Configurable timeout
             validateStatus: () => true, // Don't throw on any status code

@@ -36,6 +36,7 @@ program
     .option('--auth-header <name>', 'Header name for API key (default: X-API-Key)', 'X-API-Key')
     .option('--auth-query <name>', 'Query parameter name for API key')
     .option('--auth-basic <user:pass>', 'Basic authentication (username:password)')
+    .option('-H, --header <header>', 'Custom header (Name: Value), repeatable', (value, previous = []) => [...previous, value], [])
     .action(async (spec, baseUrl, options) => {
     try {
         await (0, test_1.runTests)(spec, baseUrl, options);
