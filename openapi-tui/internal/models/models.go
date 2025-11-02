@@ -19,6 +19,7 @@ const (
 	CustomRequestScreen
 	HistoryScreen
 	EndpointSelectorScreen
+	ConfigEditorScreen
 )
 
 // Model is the main application state
@@ -33,6 +34,7 @@ type Model struct {
 	TestModel             TestModel
 	CustomRequestModel    CustomRequestModel
 	EndpointSelectorModel EndpointSelectorModel
+	ConfigEditorModel     ConfigEditorModel
 	History               *TestHistory
 	HistoryIndex          int  // Selected index in history view
 }
@@ -190,8 +192,25 @@ type ExportData struct {
 Timestamp  string         `json:"timestamp"`
 SpecPath   string         `json:"specPath"`
 BaseURL    string         `json:"baseUrl"`
-TotalTests int            `json:"totalTests"`
-Passed     int            `json:"passed"`
-Failed     int            `json:"failed"`
-Results    []ExportResult `json:"results"`
+	TotalTests int            `json:"totalTests"`
+	Passed     int            `json:"passed"`
+	Failed     int            `json:"failed"`
+	Results    []ExportResult `json:"results"`
+}
+
+// ConfigEditorModel holds state for the configuration editor screen
+type ConfigEditorModel struct {
+	FocusedField      int               // Currently focused field index
+	SpecPathInput     textinput.Model
+	BaseURLInput      textinput.Model
+	AuthTypeInput     textinput.Model
+	TokenInput        textinput.Model
+	APIKeyNameInput   textinput.Model
+	APIKeyInInput     textinput.Model
+	UsernameInput     textinput.Model
+	PasswordInput     textinput.Model
+	MaxConcurrInput   textinput.Model
+	VerboseInput      textinput.Model
+	OriginalConfig    Config            // Store original config for cancel
+	ValidationError   string
 }

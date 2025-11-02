@@ -502,8 +502,8 @@ All Tests:       PASSING ✅
 ## Summary
 
 **Phase 1 Status**: ✅ COMPLETE (5/5 features - 100%)
-**Phase 2 Status**: 🚀 IN PROGRESS (11/15 features - 73%)
-**Test Coverage**: 177 tests passing (83 parallel + 20 JUnit + 25 HTML + 24 filter + 12 stats + 8 history + 5 other)
+**Phase 2 Status**: 🚀 IN PROGRESS (14/15 features - 93%)
+**Test Coverage**: 269 tests passing (66 endpoints + 14 config + 45 custom + 20 JUnit + 25 HTML + 24 filter + 12 stats + 8 history + 55 other)
 **Build Status**: ✅ All tests passing, binary builds successfully, no race conditions
 **Code Organization**: ✅ Standard Go project layout (cmd/ + internal/)
 **Documentation**: ✅ README, ARCHITECTURE, and PROGRESS fully updated
@@ -754,7 +754,96 @@ The application now:
   - **Professional workflow** - Similar to Postman/Insomnia collection runners
   - **Complements auto-testing** - Choose between "test all" or "select & test"
 
+#### 14. Configuration Management UI
+- **Status**: Complete ✅
+- **Implementation**:
+  - `models.go` - Added `ConfigEditorScreen` and `ConfigEditorModel` struct (10 fields)
+    - `ConfigEditorModel` with 10 textinput fields for all settings
+    - `FocusedField` int for tracking which field has focus
+    - `OriginalConfig` for cancel/restore functionality
+    - `ValidationError` string for inline error display
+  - `ui_helpers.go` - Added `InitialConfigEditorModel()` (120+ lines)
+    - Loads current config values into all fields
+    - Pre-populates spec path, base URL, auth settings
+    - Sets up password masking for token and password fields
+    - Configures field widths and placeholders
+    - Initializes focus on first field
+  - `views.go` - Added `ViewConfigEditor()` (100+ lines)
+    - Sectioned form layout: General / Authentication / Performance
+    - Color-coded labels with focus indicators
+    - Real-time field highlighting (red cursor + bold for focused field)
+    - Inline validation error display (red, bold)
+    - Context-aware help text for auth types and settings
+    - Clear instructions for navigation and actions
+  - `main.go` - Full integration (200+ lines of handler code)
+    - Updated menu to 8 options (added "⚙️  Settings")
+    - Menu cursor range 0-7
+    - Added `updateConfigEditor()` handler (60+ lines)
+      - Tab/Shift+Tab for field navigation
+      - Up/Down also works for navigation
+      - Enter to save with validation
+      - Esc to cancel and return to menu
+      - Focus management with updateConfigEditorFocus()
+    - Added `saveConfig()` function (80+ lines)
+      - Validates auth type (none, bearer, apikey, basic)
+      - Validates verbose mode (true/false)
+      - Validates max concurrency (0-9 or auto)
+      - Validates API key location (header/query)
+      - Builds new config from form values
+      - Saves to ~/.config/openapi-tui/config.yaml
+      - Updates application config immediately
+      - Returns to menu on success
+    - Added View case for ConfigEditorScreen
+  - `config_test.go` (380+ lines) - Comprehensive test suite
+    - 10 test functions with 20+ test cases
+    - `TestGetConfigPath` - Path resolution
+    - `TestLoadConfig_NoFile` - Default config when file missing
+    - `TestSaveAndLoadConfig` - Round-trip persistence with all fields
+    - `TestSaveConfig_NoAuth` - Config without authentication
+    - `TestSaveConfig_APIKeyAuth` - API key specific settings
+    - `TestSaveConfig_BasicAuth` - Basic auth credentials
+    - `TestSaveConfig_MaxConcurrency` - Various concurrency settings (0-10)
+    - `TestLoadConfig_CorruptFile` - Graceful handling of corrupt YAML
+    - `TestSaveConfig_EmptyValues` - Empty string preservation
+    - `TestConfigPersistence` - Multiple save/load cycles
+- **Features**:
+  - ✅ Form-based configuration editor with 10 editable fields
+  - ✅ General settings: Spec path, base URL, verbose mode
+  - ✅ Authentication settings: Type, token, API key (name + location), username, password
+  - ✅ Performance settings: Max concurrency (0 for auto-detect)
+  - ✅ Real-time field navigation with Tab/Shift+Tab
+  - ✅ Visual focus indicators (red cursor + bold text)
+  - ✅ Password masking for sensitive fields (token, password)
+  - ✅ Inline validation with clear error messages
+  - ✅ Context-sensitive help text
+  - ✅ Save and immediate application of changes
+  - ✅ Cancel to discard changes
+  - ✅ Pre-populated with current config values
+  - ✅ Validation for auth types, verbose mode, concurrency
+  - ✅ Supports all auth types: none, bearer, apikey (header/query), basic
+  - ✅ Professional sectioned layout (General / Auth / Performance)
+  - ✅ Auto-saves to ~/.config/openapi-tui/config.yaml
+  - ✅ Changes apply immediately (no restart needed)
+- **Test Coverage**: 269 total tests (255 + 14 new config tests)
+  - All config save/load scenarios
+  - All authentication types
+  - Validation edge cases
+  - Corrupt file handling
+  - Multiple persistence cycles
+  - Empty values and defaults
+- **Impact**:
+  - **Easy configuration management** - No need to edit YAML files manually
+  - **Visual configuration** - See all settings at once in organized form
+  - **Validation prevents errors** - Catch invalid values before saving
+  - **Quick auth switching** - Change between auth types easily
+  - **Performance tuning** - Adjust concurrency for your environment
+  - **Persistent settings** - Config survives app restarts
+  - **Professional UX** - Form-based editing matches modern applications
+  - **Secure** - Password fields masked during entry
+  - **Immediate feedback** - Validation errors shown inline
+  - **No learning curve** - Intuitive form with clear labels and help text
+
 **Phase 1 Achievement**: All critical foundation features delivered! 🎉
-**Phase 2 Progress**: 13/15 features complete (87%) - Nearly complete! 🚀
+**Phase 2 Progress**: 14/15 features complete (93%) - Almost there! 🚀
 **Architecture**: Refactored to standard Go layout (cmd/ + internal/ packages)
-**Latest Feature**: Endpoint Search & Selection - Professional endpoint filtering and selection 🎯
+**Latest Feature**: Configuration Management UI - Professional form-based settings editor ⚙️

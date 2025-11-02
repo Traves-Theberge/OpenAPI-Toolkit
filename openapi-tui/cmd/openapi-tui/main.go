@@ -104,6 +104,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateEndpointSelector(msg)
 		case models.HistoryScreen:
 			return m.updateHistory(msg)
+		case models.ConfigEditorScreen:
+			return m.updateConfigEditor(msg)
 		}
 	case testing.TestCompleteMsg:
 		if m.Screen == models.TestScreen {
@@ -133,7 +135,7 @@ func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.Cursor--
 		}
 	case "down", "j":
-		if m.Cursor < 6 {
+		if m.Cursor < 7 {
 			m.Cursor++
 		}
 	case "h", "?":
@@ -168,9 +170,14 @@ func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.HistoryIndex = 0
 			return m, nil
 		case 5:
-			m.Screen = models.HelpScreen
+			// Settings
+			m.Screen = models.ConfigEditorScreen
+			m.ConfigEditorModel = ui.InitialConfigEditorModel(m.Config)
 			return m, nil
 		case 6:
+			m.Screen = models.HelpScreen
+			return m, nil
+		case 7:
 			return m, tea.Quit
 		}
 	}
@@ -509,6 +516,182 @@ func (m model) updateHistory(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// updateConfigEditor handles key events in the configuration editor screen
+func (m model) updateConfigEditor(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	ce := &m.ConfigEditorModel
+	var cmd tea.Cmd
+
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+	case "esc":
+		// Cancel and return to menu
+		m.Screen = models.MenuScreen
+		ce.ValidationError = ""
+		return m, nil
+	case "tab", "down":
+		// Move to next field
+		ce.FocusedField = (ce.FocusedField + 1) % 10
+		m.updateConfigEditorFocus()
+		return m, nil
+	case "shift+tab", "up":
+		// Move to previous field
+		ce.FocusedField = (ce.FocusedField - 1 + 10) % 10
+		m.updateConfigEditorFocus()
+		return m, nil
+	case "enter":
+		// Save configuration
+		return m.saveConfig()
+	}
+
+	// Update the focused field's text input
+	switch ce.FocusedField {
+	case 0:
+		ce.SpecPathInput, cmd = ce.SpecPathInput.Update(msg)
+	case 1:
+		ce.BaseURLInput, cmd = ce.BaseURLInput.Update(msg)
+	case 2:
+		ce.VerboseInput, cmd = ce.VerboseInput.Update(msg)
+	case 3:
+		ce.AuthTypeInput, cmd = ce.AuthTypeInput.Update(msg)
+	case 4:
+		ce.TokenInput, cmd = ce.TokenInput.Update(msg)
+	case 5:
+		ce.APIKeyNameInput, cmd = ce.APIKeyNameInput.Update(msg)
+	case 6:
+		ce.APIKeyInInput, cmd = ce.APIKeyInInput.Update(msg)
+	case 7:
+		ce.UsernameInput, cmd = ce.UsernameInput.Update(msg)
+	case 8:
+		ce.PasswordInput, cmd = ce.PasswordInput.Update(msg)
+	case 9:
+		ce.MaxConcurrInput, cmd = ce.MaxConcurrInput.Update(msg)
+	}
+
+	return m, cmd
+}
+
+// updateConfigEditorFocus updates which field has focus
+func (m *model) updateConfigEditorFocus() {
+	ce := &m.ConfigEditorModel
+	
+	// Blur all fields
+	ce.SpecPathInput.Blur()
+	ce.BaseURLInput.Blur()
+	ce.VerboseInput.Blur()
+	ce.AuthTypeInput.Blur()
+	ce.TokenInput.Blur()
+	ce.APIKeyNameInput.Blur()
+	ce.APIKeyInInput.Blur()
+	ce.UsernameInput.Blur()
+	ce.PasswordInput.Blur()
+	ce.MaxConcurrInput.Blur()
+	
+	// Focus the current field
+	switch ce.FocusedField {
+	case 0:
+		ce.SpecPathInput.Focus()
+	case 1:
+		ce.BaseURLInput.Focus()
+	case 2:
+		ce.VerboseInput.Focus()
+	case 3:
+		ce.AuthTypeInput.Focus()
+	case 4:
+		ce.TokenInput.Focus()
+	case 5:
+		ce.APIKeyNameInput.Focus()
+	case 6:
+		ce.APIKeyInInput.Focus()
+	case 7:
+		ce.UsernameInput.Focus()
+	case 8:
+		ce.PasswordInput.Focus()
+	case 9:
+		ce.MaxConcurrInput.Focus()
+	}
+}
+
+// saveConfig validates and saves the configuration from the editor
+func (m model) saveConfig() (tea.Model, tea.Cmd) {
+	ce := &m.ConfigEditorModel
+	
+	// Parse and validate inputs
+	authType := strings.ToLower(strings.TrimSpace(ce.AuthTypeInput.Value()))
+	verbose := strings.ToLower(strings.TrimSpace(ce.VerboseInput.Value()))
+	maxConcurrStr := strings.TrimSpace(ce.MaxConcurrInput.Value())
+	
+	// Validate auth type
+	if authType != "" && authType != "none" && authType != "bearer" && authType != "apikey" && authType != "basic" {
+		ce.ValidationError = "Invalid auth type. Must be: none, bearer, apikey, or basic"
+		return m, nil
+	}
+	
+	// Validate verbose mode
+	if verbose != "" && verbose != "true" && verbose != "false" {
+		ce.ValidationError = "Invalid verbose mode. Must be: true or false"
+		return m, nil
+	}
+	
+	// Validate max concurrency
+	var maxConcurrency int
+	if maxConcurrStr != "" {
+		if maxConcurrStr == "0" || maxConcurrStr == "auto" {
+			maxConcurrency = 0
+		} else if len(maxConcurrStr) == 1 && maxConcurrStr[0] >= '1' && maxConcurrStr[0] <= '9' {
+			maxConcurrency = int(maxConcurrStr[0] - '0')
+		} else {
+			ce.ValidationError = "Invalid max concurrency. Must be 0-9 or 'auto'"
+			return m, nil
+		}
+	}
+	
+	// Validate API key settings
+	if authType == "apikey" {
+		apiKeyIn := strings.ToLower(strings.TrimSpace(ce.APIKeyInInput.Value()))
+		if apiKeyIn != "" && apiKeyIn != "header" && apiKeyIn != "query" {
+			ce.ValidationError = "API Key location must be: header or query"
+			return m, nil
+		}
+	}
+	
+	// Build new config
+	newConfig := models.Config{
+		SpecPath:       strings.TrimSpace(ce.SpecPathInput.Value()),
+		BaseURL:        strings.TrimSpace(ce.BaseURLInput.Value()),
+		VerboseMode:    verbose == "true",
+		MaxConcurrency: maxConcurrency,
+	}
+	
+	// Build auth config if auth type is set
+	if authType != "" && authType != "none" {
+		newConfig.Auth = &models.AuthConfig{
+			AuthType:   authType,
+			Token:      strings.TrimSpace(ce.TokenInput.Value()),
+			APIKeyName: strings.TrimSpace(ce.APIKeyNameInput.Value()),
+			APIKeyIn:   strings.ToLower(strings.TrimSpace(ce.APIKeyInInput.Value())),
+			Username:   strings.TrimSpace(ce.UsernameInput.Value()),
+			Password:   strings.TrimSpace(ce.PasswordInput.Value()),
+		}
+	}
+	
+	// Save to file
+	if err := config.SaveConfig(newConfig); err != nil {
+		ce.ValidationError = fmt.Sprintf("Failed to save config: %v", err)
+		return m, nil
+	}
+	
+	// Update model config
+	m.Config = newConfig
+	m.VerboseMode = newConfig.VerboseMode
+	
+	// Return to menu
+	m.Screen = models.MenuScreen
+	ce.ValidationError = ""
+	
+	return m, nil
+}
+
 // updateCustomRequest handles events in the custom request screen
 func (m model) updateCustomRequest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
@@ -826,6 +1009,8 @@ func (m model) View() string {
 		return ui.ViewHistory(m.Model)
 	case models.EndpointSelectorScreen:
 		return ui.ViewEndpointSelector(m.Model)
+	case models.ConfigEditorScreen:
+		return ui.ViewConfigEditor(m.Model)
 	default:
 		return "Unknown screen"
 	}

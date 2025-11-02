@@ -25,7 +25,7 @@ func ViewMenu(m models.Model) string {
 
 	// Menu options with styling - highlight selected item
 	var menuItems []string
-	options := []string{"📋 Validate OpenAPI Spec", "🧪 Test All Endpoints", "🎯 Select & Test Endpoints", "✏️  Custom Request", "📜 History", "❓ Help", "👋 Quit"}
+	options := []string{"📋 Validate OpenAPI Spec", "🧪 Test All Endpoints", "🎯 Select & Test Endpoints", "✏️  Custom Request", "📜 History", "⚙️  Settings", "❓ Help", "👋 Quit"}
 
 	for i, option := range options {
 		var cursor string
@@ -816,4 +816,108 @@ func ViewEndpointSelector(m models.Model) string {
 		Render("↑/↓: Navigate | Space: Toggle | a: Select All | d: Deselect All | Enter: Test Selected | Esc: Cancel")
 
 	return title + "\n\n" + searchBox + "\n" + countText + filterInfo + "\n\n" + scrollIndicator + list + scrollIndicator + "\n" + instructions
+}
+
+// ViewConfigEditor renders the configuration editor screen
+func ViewConfigEditor(m models.Model) string {
+	ce := m.ConfigEditorModel
+
+	// Title
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Background(lipgloss.Color("#7D56F4")).
+		Padding(1, 2).
+		MarginBottom(1).
+		Render("⚙️  Configuration Settings")
+
+	// Validation error
+	var errorDisplay string
+	if ce.ValidationError != "" {
+		errorDisplay = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF6B6B")).
+			Bold(true).
+			Render("❌ " + ce.ValidationError) + "\n\n"
+	}
+
+	// Helper to render a labeled field
+	renderField := func(label string, input string, fieldIndex int) string {
+		labelStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Width(20).
+			Align(lipgloss.Right)
+
+		focusStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF6B6B")).
+			Bold(true)
+
+		normalStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#4ECDC4"))
+
+		// Add focus indicator
+		cursor := "  "
+		labelText := label
+		if ce.FocusedField == fieldIndex {
+			cursor = "▶ "
+			labelText = focusStyle.Render(label)
+		} else {
+			labelText = normalStyle.Render(label)
+		}
+
+		return cursor + labelStyle.Render(labelText+":") + " " + input
+	}
+
+	// Section headers
+	generalHeader := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Bold(true).
+		Render("General Settings")
+
+	authHeader := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Bold(true).
+		Render("\nAuthentication Settings")
+
+	performanceHeader := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Bold(true).
+		Render("\nPerformance Settings")
+
+	// Build form fields
+	fields := []string{
+		generalHeader,
+		renderField("Spec Path", ce.SpecPathInput.View(), 0),
+		renderField("Base URL", ce.BaseURLInput.View(), 1),
+		renderField("Verbose Mode", ce.VerboseInput.View(), 2),
+		"",
+		authHeader,
+		renderField("Auth Type", ce.AuthTypeInput.View(), 3),
+		renderField("Bearer Token", ce.TokenInput.View(), 4),
+		renderField("API Key Name", ce.APIKeyNameInput.View(), 5),
+		renderField("API Key Location", ce.APIKeyInInput.View(), 6),
+		renderField("Username", ce.UsernameInput.View(), 7),
+		renderField("Password", ce.PasswordInput.View(), 8),
+		"",
+		performanceHeader,
+		renderField("Max Concurrency", ce.MaxConcurrInput.View(), 9),
+	}
+
+	form := lipgloss.JoinVertical(lipgloss.Left, fields...)
+
+	// Help text
+	helpText := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#888")).
+		Italic(true).
+		MarginTop(1).
+		Render("Auth Type: none, bearer, apikey, or basic\n" +
+			"API Key Location: header or query\n" +
+			"Max Concurrency: 0 for auto-detect (uses CPU count, capped at 10)")
+
+	// Instructions
+	instructions := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#888")).
+		MarginTop(2).
+		Render("Tab/Shift+Tab: Navigate | Enter: Save | Esc: Cancel")
+
+	return title + "\n\n" + errorDisplay + form + "\n\n" + helpText + "\n" + instructions
 }

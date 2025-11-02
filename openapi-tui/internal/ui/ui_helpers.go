@@ -196,3 +196,120 @@ func InitialEndpointSelectorModel() models.EndpointSelectorModel {
 		Ready:             false,
 	}
 }
+
+// InitialConfigEditorModel creates and configures the configuration editor model
+func InitialConfigEditorModel(cfg models.Config) models.ConfigEditorModel {
+	// Spec Path input
+	specPathTi := textinput.New()
+	specPathTi.Placeholder = "Path to OpenAPI spec (e.g., openapi.yaml)"
+	specPathTi.CharLimit = 200
+	specPathTi.Width = 60
+	if cfg.SpecPath != "" {
+		specPathTi.SetValue(cfg.SpecPath)
+	}
+
+	// Base URL input
+	baseURLTi := textinput.New()
+	baseURLTi.Placeholder = "Base URL (e.g., https://api.example.com)"
+	baseURLTi.CharLimit = 200
+	baseURLTi.Width = 60
+	if cfg.BaseURL != "" {
+		baseURLTi.SetValue(cfg.BaseURL)
+	}
+
+	// Auth Type input
+	authTypeTi := textinput.New()
+	authTypeTi.Placeholder = "none, bearer, apikey, basic"
+	authTypeTi.CharLimit = 20
+	authTypeTi.Width = 30
+	if cfg.Auth != nil && cfg.Auth.AuthType != "" {
+		authTypeTi.SetValue(cfg.Auth.AuthType)
+	}
+
+	// Token input
+	tokenTi := textinput.New()
+	tokenTi.Placeholder = "Bearer token value"
+	tokenTi.CharLimit = 200
+	tokenTi.Width = 60
+	tokenTi.EchoMode = textinput.EchoPassword
+	tokenTi.EchoCharacter = '•'
+	if cfg.Auth != nil && cfg.Auth.Token != "" {
+		tokenTi.SetValue(cfg.Auth.Token)
+	}
+
+	// API Key Name input
+	apiKeyNameTi := textinput.New()
+	apiKeyNameTi.Placeholder = "API key header/query name (e.g., X-API-Key)"
+	apiKeyNameTi.CharLimit = 100
+	apiKeyNameTi.Width = 50
+	if cfg.Auth != nil && cfg.Auth.APIKeyName != "" {
+		apiKeyNameTi.SetValue(cfg.Auth.APIKeyName)
+	}
+
+	// API Key Location input
+	apiKeyInTi := textinput.New()
+	apiKeyInTi.Placeholder = "header or query"
+	apiKeyInTi.CharLimit = 10
+	apiKeyInTi.Width = 20
+	if cfg.Auth != nil && cfg.Auth.APIKeyIn != "" {
+		apiKeyInTi.SetValue(cfg.Auth.APIKeyIn)
+	}
+
+	// Username input
+	usernameTi := textinput.New()
+	usernameTi.Placeholder = "Basic auth username"
+	usernameTi.CharLimit = 100
+	usernameTi.Width = 40
+	if cfg.Auth != nil && cfg.Auth.Username != "" {
+		usernameTi.SetValue(cfg.Auth.Username)
+	}
+
+	// Password input
+	passwordTi := textinput.New()
+	passwordTi.Placeholder = "Basic auth password"
+	passwordTi.CharLimit = 200
+	passwordTi.Width = 40
+	passwordTi.EchoMode = textinput.EchoPassword
+	passwordTi.EchoCharacter = '•'
+	if cfg.Auth != nil && cfg.Auth.Password != "" {
+		passwordTi.SetValue(cfg.Auth.Password)
+	}
+
+	// Max Concurrency input
+	maxConcurrTi := textinput.New()
+	maxConcurrTi.Placeholder = "0 (auto-detect)"
+	maxConcurrTi.CharLimit = 3
+	maxConcurrTi.Width = 10
+	if cfg.MaxConcurrency > 0 {
+		maxConcurrTi.SetValue(string(rune(cfg.MaxConcurrency + '0')))
+	}
+
+	// Verbose Mode input
+	verboseTi := textinput.New()
+	verboseTi.Placeholder = "true or false"
+	verboseTi.CharLimit = 5
+	verboseTi.Width = 10
+	if cfg.VerboseMode {
+		verboseTi.SetValue("true")
+	} else {
+		verboseTi.SetValue("false")
+	}
+
+	// Focus first field
+	specPathTi.Focus()
+
+	return models.ConfigEditorModel{
+		FocusedField:    0,
+		SpecPathInput:   specPathTi,
+		BaseURLInput:    baseURLTi,
+		AuthTypeInput:   authTypeTi,
+		TokenInput:      tokenTi,
+		APIKeyNameInput: apiKeyNameTi,
+		APIKeyInInput:   apiKeyInTi,
+		UsernameInput:   usernameTi,
+		PasswordInput:   passwordTi,
+		MaxConcurrInput: maxConcurrTi,
+		VerboseInput:    verboseTi,
+		OriginalConfig:  cfg,
+	}
+}
