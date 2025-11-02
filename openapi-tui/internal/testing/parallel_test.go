@@ -10,6 +10,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/Traves-Theberge/OpenAPI-Toolkit/openapi-tui/internal/models"
 )
 
 // TestRunTestsParallel_AutoDetectConcurrency verifies auto-detection of CPU count
@@ -492,4 +493,127 @@ func createTempSpec(tb testing.TB, content string) string {
 func writeFile(path, content string) error {
 	// Use os.WriteFile from standard library
 	return os.WriteFile(path, []byte(content), 0644)
+}
+
+func TestRunTestParallelCmdWithSelection(t *testing.T) {
+	// Create a test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"result": "ok"}`))
+	}))
+	defer server.Close()
+
+	// Create spec with selected endpoints
+	specContent := `
+openapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      responses:
+        '200':
+          description: OK
+  /posts:
+    get:
+      responses:
+        '200':
+          description: OK
+`
+	specPath := createTempSpec(t, specContent)
+
+	// Use models.EndpointInfo for selected endpoints - only include selected ones in the array
+	selectedEndpoints := []models.EndpointInfo{
+		{Path: "/users", Method: "GET", Selected: true},
+	}
+
+	// Test with selected endpoint only
+	cmd := RunTestParallelCmdWithSelection(specPath, server.URL, nil, false, 2, 3, 1000, selectedEndpoints)
+	msg := cmd()
+
+	switch msg := msg.(type) {
+	case TestCompleteMsg:
+		// Should only test the selected endpoint
+		if len(msg.Results) != 1 {
+			t.Errorf("Expected 1 result (selected endpoint only), got %d", len(msg.Results))
+		}
+		if msg.Results[0].Endpoint != "/users" {
+			t.Errorf("Expected endpoint /users, got %s", msg.Results[0].Endpoint)
+		}
+	case TestErrorMsg:
+		t.Fatalf("Expected TestCompleteMsg, got TestErrorMsg: %v", msg.Err)
+	default:
+		t.Fatalf("Expected TestCompleteMsg, got %T", msg)
+	}
+}
+
+func TestRunTestsParallelWithSelection(t *testing.T) {
+	// Create a test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/users" {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"users": []}`))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	// Create spec with multiple endpoints
+	specContent := `
+openapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      responses:
+        '200':
+          description: OK
+  /posts:
+    get:
+      responses:
+        '200':
+          description: OK
+  /comments:
+    get:
+      responses:
+        '200':
+          description: OK
+`
+	specPath := createTempSpec(t, specContent)
+
+	// Select only /users and /comments using models.EndpointInfo - only include selected ones
+	selectedEndpoints := []models.EndpointInfo{
+		{Path: "/users", Method: "GET", Selected: true},
+		{Path: "/comments", Method: "GET", Selected: true},
+	}
+
+	results, err := RunTestsParallelWithSelection(specPath, server.URL, nil, false, 2, 3, 1000, nil, selectedEndpoints)
+	if err != nil {
+		t.Fatalf("RunTestsParallelWithSelection failed: %v", err)
+	}
+
+	// Should only have results for selected endpoints
+	if len(results) != 2 {
+		t.Errorf("Expected 2 results (selected endpoints only), got %d", len(results))
+	}
+
+	// Verify the correct endpoints were tested
+	testedPaths := make(map[string]bool)
+	for _, r := range results {
+		testedPaths[r.Endpoint] = true
+	}
+
+	if !testedPaths["/users"] {
+		t.Error("Expected /users to be tested")
+	}
+	if !testedPaths["/comments"] {
+		t.Error("Expected /comments to be tested")
+	}
+	if testedPaths["/posts"] {
+		t.Error("Did not expect /posts to be tested (not selected)")
+	}
 }
