@@ -25,10 +25,10 @@ A modern, polished terminal user interface for validating and testing APIs again
 
 ### Phase 2 — Developer Experience (In Progress 🚀)
 - 💡 **Enhanced Error Messages** — Actionable suggestions for common issues ✅
-- 📊 **Verbose Logging** — Full HTTP transaction details with 'v' toggle ✅
+- 📊 **Verbose Logging & Display** — Full HTTP details with 'v' toggle, 'l' to view logs ✅
 - 💾 **Configuration Support** — Auto-save/load settings from `~/.config/openapi-tui/config.yaml` ✅
 - 📤 **Export Results** — JSON export for CI/CD integration with 'e' key ✅
-- 📈 **34.8% Test Coverage** — Growing test suite with 13 test functions
+- 📈 **31.8% Test Coverage** — Growing test suite with 13 test functions
 
 ## 🛠️ Installation
 
@@ -71,8 +71,9 @@ openapi-tui
    - Provide spec file path
    - Enter base URL (e.g., `https://api.example.com`)
    - Watch automated endpoint testing (requests, validation, auth)
-   - Press **'e'** in results view to export to JSON
    - Press **'v'** to toggle verbose logging (full HTTP details)
+   - Press **'l'** on a result to view detailed logs (request/response headers, bodies, timing)
+   - Press **'e'** in results view to export to JSON
 
 ### Export Results
 After running tests, press **'e'** to export results to JSON:

@@ -185,15 +185,18 @@ All Tests:       PASSING ✅
   - "Connection Refused" → suggests checking if server is running, verifying URL/port, firewall
   - "Request Timeout" → suggests checking internet, server load, URL correctness
 
-#### 2. Verbose/Debug Logging
-- **Status**: Complete ✅  
+#### 2. Verbose Logging & Display
+- **Status**: Complete ✅
 - **Implementation**:
   - `logEntry` type captures request/response details
   - Toggle verbose mode with 'v' key (shown in status bar)
   - Captures request headers, body, response headers, body, duration
   - Request timing for all API calls
+  - 'l' key in results view shows detailed log for selected result
+  - `viewLogDetail()` function formats logs with styled sections
+  - Step 4 added to testModel workflow for log detail view
 - **Impact**: Developers can now see full HTTP transaction details for debugging
-- **Next**: Display detailed logs in results view (UI enhancement pending)
+- **UI**: Beautiful formatted display with request/response sections, headers, bodies, timing
 
 #### 3. Configuration File Support
 - **Status**: Complete ✅
@@ -225,8 +228,8 @@ All Tests:       PASSING ✅
 ## Summary
 
 **Phase 1 Status**: ✅ COMPLETE (5/5 features - 100%)
-**Phase 2 Status**: 🚀 IN PROGRESS (4/15 features - 27%)
-**Test Coverage**: 34.8% (all tests passing!)
+**Phase 2 Status**: 🚀 IN PROGRESS (5/15 features - 33%)
+**Test Coverage**: 31.8% (all tests passing!)
 **Build Status**: ✅ All tests passing, binary builds successfully
 **Documentation**: ✅ README, ARCHITECTURE, and PROGRESS fully updated
 
@@ -242,4 +245,4 @@ The application now:
 - ✅ Exports test results to JSON for CI/CD integration (Phase 2!)
 
 **Phase 1 Achievement**: All critical foundation features delivered! 🎉
-**Phase 2 Progress**: 4/15 features complete - DevEx improvements rolling out! 🚀
+**Phase 2 Progress**: 5/15 features complete - DevEx improvements rolling out! 🚀

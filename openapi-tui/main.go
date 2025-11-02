@@ -61,7 +61,7 @@ type testResultMsg struct {
 
 // testModel manages the multi-step API testing workflow
 type testModel struct {
-	step          int                // Current step: 0=file input, 1=URL input, 2=testing, 3=results
+	step          int                // Current step: 0=file input, 1=URL input, 2=testing, 3=results, 4=log detail
 	specInput     textinput.Model    // Text input for OpenAPI spec file path
 	urlInput      textinput.Model    // Text input for base API URL
 	spinner       spinner.Model      // Loading spinner for async operations
@@ -72,6 +72,8 @@ type testModel struct {
 	testing       bool               // Whether testing is currently in progress
 	results       []testResult       // Array of test results
 	exportSuccess string             // Export success message (if exported)
+	showingLog    bool               // Whether showing log detail view
+	selectedLog   int                // Index of selected result for log viewing
 }
 
 // testResult represents a single API endpoint test result
@@ -821,6 +823,21 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				return m, nil
+			case "l":
+				// Show log detail for selected result (if verbose mode and log available)
+				if m.verboseMode && len(m.testModel.results) > 0 {
+					selectedIdx := m.testModel.table.Cursor()
+					if selectedIdx >= 0 && selectedIdx < len(m.testModel.results) {
+						result := m.testModel.results[selectedIdx]
+						if result.logEntry != nil {
+							m.testModel.showingLog = true
+							m.testModel.selectedLog = selectedIdx
+							m.testModel.step = 4 // Move to log detail view
+							return m, nil
+						}
+					}
+				}
+				return m, nil
 			}
 			switch msg.Type {
 			case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
@@ -832,6 +849,22 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Handle table navigation and selection
 		m.testModel.table, cmd = m.testModel.table.Update(msg)
+	case 4: // Log detail view
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEsc, tea.KeyEnter:
+				// Return to results view
+				m.testModel.showingLog = false
+				m.testModel.step = 3
+				return m, nil
+			case tea.KeyCtrlC:
+				// Return to menu
+				m.screen = menuScreen
+				m.testModel = initialTestModel()
+				return m, nil
+			}
+		}
 	}
 
 	return m, cmd
@@ -1106,10 +1139,21 @@ func (m model) viewTest() string {
 			}
 		}
 		// Add instructions
-		instructions := "Press 'e' to export results | Enter to return to menu"
+		instructions := "Press 'e' to export results"
+		if m.verboseMode {
+			instructions += " | 'l' to view logs"
+		}
+		instructions += " | Enter to return to menu"
 		content += "\n\n" + lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#888")).
 			Render(instructions)
+	case 4: // Log detail view
+		if m.testModel.selectedLog >= 0 && m.testModel.selectedLog < len(m.testModel.results) {
+			result := m.testModel.results[m.testModel.selectedLog]
+			if result.logEntry != nil {
+				content = m.viewLogDetail(result, result.logEntry)
+			}
+		}
 	}
 
 	// Center the entire content with dynamic sizing and border
@@ -1126,6 +1170,71 @@ func (m model) viewTest() string {
 		lipgloss.WithWhitespaceChars(" "),
 		lipgloss.WithWhitespaceForeground(lipgloss.Color("#333")),
 	)
+}
+
+// viewLogDetail renders the detailed log view for a test result
+func (m model) viewLogDetail(result testResult, log *logEntry) string {
+	titleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#7D56F4"))
+	
+	labelStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#4ECDC4"))
+	
+	valueStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FAFAFA"))
+	
+	headerStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#888"))
+	
+	// Title
+	title := titleStyle.Render(fmt.Sprintf("📊 Log Details: %s %s", result.method, result.endpoint))
+	
+	// Request section
+	requestSection := labelStyle.Render("🔼 REQUEST") + "\n"
+	requestSection += labelStyle.Render("URL: ") + valueStyle.Render(log.requestURL) + "\n"
+	requestSection += labelStyle.Render("Timestamp: ") + valueStyle.Render(log.timestamp.Format(time.RFC3339)) + "\n"
+	requestSection += labelStyle.Render("Duration: ") + valueStyle.Render(log.duration.String()) + "\n"
+	
+	// Request headers
+	if len(log.requestHeaders) > 0 {
+		requestSection += "\n" + headerStyle.Render("Headers:")
+		for k, v := range log.requestHeaders {
+			requestSection += "\n  " + labelStyle.Render(k+": ") + valueStyle.Render(v)
+		}
+	}
+	
+	// Request body
+	if log.requestBody != "" {
+		requestSection += "\n\n" + headerStyle.Render("Body:")
+		requestSection += "\n" + valueStyle.Render(log.requestBody)
+	}
+	
+	// Response section
+	responseSection := "\n\n" + labelStyle.Render("🔽 RESPONSE") + "\n"
+	responseSection += labelStyle.Render("Status: ") + valueStyle.Render(result.status) + " - " + valueStyle.Render(result.message) + "\n"
+	
+	// Response headers
+	if len(log.responseHeaders) > 0 {
+		responseSection += "\n" + headerStyle.Render("Headers:")
+		for k, v := range log.responseHeaders {
+			responseSection += "\n  " + labelStyle.Render(k+": ") + valueStyle.Render(v)
+		}
+	}
+	
+	// Response body
+	if log.responseBody != "" {
+		responseSection += "\n\n" + headerStyle.Render("Body:")
+		responseSection += "\n" + valueStyle.Render(log.responseBody)
+	}
+	
+	// Footer
+	footer := "\n\n" + lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#888")).
+		Render("Press Esc or Enter to return to results")
+	
+	return title + "\n\n" + requestSection + responseSection + footer
 }
 
 func initialValidateModel() validateModel {
