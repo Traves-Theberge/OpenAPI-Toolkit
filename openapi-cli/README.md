@@ -176,6 +176,17 @@ The test suite includes:
 - File handling tests
 - Mock filesystem tests
 
+## 📚 Documentation
+
+For comprehensive guides and documentation:
+
+- **[Complete User Guide](docs/USER-GUIDE.md)** - End-to-end guide with real-world examples
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and components
+- **[Progress Tracking](docs/PROGRESS.md)** - Feature roadmap and status
+- **[Testing Guide](docs/TESTING-GUIDE.md)** - Testing procedures
+
+---
+
 ## Advanced Features
 
 ### Verbose Mode
