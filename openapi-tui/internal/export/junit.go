@@ -116,6 +116,9 @@ func ExportResultsToJUnit(results []models.TestResult, specPath, baseURL string)
 			var sysOut strings.Builder
 			sysOut.WriteString(fmt.Sprintf("Request: %s %s\n", r.Method, r.LogEntry.RequestURL))
 			sysOut.WriteString(fmt.Sprintf("Duration: %s\n", r.Duration))
+			if r.RetryCount > 0 {
+				sysOut.WriteString(fmt.Sprintf("Retries: %d\n", r.RetryCount))
+			}
 			
 			if len(r.LogEntry.RequestHeaders) > 0 {
 				sysOut.WriteString("Request Headers:\n")

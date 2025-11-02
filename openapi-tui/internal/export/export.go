@@ -37,11 +37,12 @@ func ExportResults(results []models.TestResult, specPath string) (string, error)
 	// Convert test results to export format
 	for i, r := range results {
 		data.Results[i] = models.ExportResult{
-			Method:   r.Method,
-			Endpoint: r.Endpoint,
-			Status:   r.Status,
-			Message:  r.Message,
-			Duration: r.Duration.String(), // Convert duration to string
+			Method:     r.Method,
+			Endpoint:   r.Endpoint,
+			Status:     r.Status,
+			Message:    r.Message,
+			Duration:   r.Duration.String(), // Convert duration to string
+			RetryCount: r.RetryCount,        // Include retry count
 		}
 	}
 
@@ -90,11 +91,12 @@ func ExportResultsToFile(results []models.TestResult, specPath, filename string)
 	// Convert test results to export format
 	for i, r := range results {
 		data.Results[i] = models.ExportResult{
-			Method:   r.Method,
-			Endpoint: r.Endpoint,
-			Status:   r.Status,
-			Message:  r.Message,
-			Duration: r.Duration.String(), // Convert duration to string
+			Method:     r.Method,
+			Endpoint:   r.Endpoint,
+			Status:     r.Status,
+			Message:    r.Message,
+			Duration:   r.Duration.String(), // Convert duration to string
+			RetryCount: r.RetryCount,        // Include retry count
 		}
 	}
 

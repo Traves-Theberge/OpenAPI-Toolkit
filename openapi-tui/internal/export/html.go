@@ -32,6 +32,7 @@ type HTMLResult struct {
 	Status       string
 	Message      string
 	Duration     string
+	RetryCount   int    // Number of retries performed
 	RowClass     string // CSS class for row styling (success/failure)
 	HasLog       bool
 	RequestURL   string
@@ -343,6 +344,7 @@ const htmlTemplate = `<!DOCTYPE html>
                         <th>Status</th>
                         <th>Message</th>
                         <th>Duration</th>
+                        <th>Retries</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -353,6 +355,7 @@ const htmlTemplate = `<!DOCTYPE html>
                         <td><span class="status {{if eq .RowClass "success"}}status-success{{else}}status-error{{end}}">{{.Status}}</span></td>
                         <td><span class="message">{{.Message}}</span></td>
                         <td><span class="duration">{{.Duration}}</span></td>
+                        <td><span class="retry-count">{{.RetryCount}}</span></td>
                     </tr>
                     {{end}}
                 </tbody>
@@ -407,12 +410,13 @@ func ExportResultsToHTML(results []models.TestResult, specPath, baseURL string) 
 		}
 
 		htmlResults[i] = HTMLResult{
-			Method:   r.Method,
-			Endpoint: r.Endpoint,
-			Status:   r.Status,
-			Message:  r.Message,
-			Duration: formatDuration(r.Duration),
-			RowClass: rowClass,
+			Method:     r.Method,
+			Endpoint:   r.Endpoint,
+			Status:     r.Status,
+			Message:    r.Message,
+			Duration:   formatDuration(r.Duration),
+			RetryCount: r.RetryCount,
+			RowClass:   rowClass,
 		}
 
 		// Add verbose log data if available

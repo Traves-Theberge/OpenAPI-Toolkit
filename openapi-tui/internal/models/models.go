@@ -185,11 +185,12 @@ Password   string `yaml:"password,omitempty"`
 
 // ExportResult represents a single test result in the export format
 type ExportResult struct {
-Method   string `json:"method"`
-Endpoint string `json:"endpoint"`
-Status   string `json:"status"`
-Message  string `json:"message"`
-Duration string `json:"duration"`
+	Method     string `json:"method"`
+	Endpoint   string `json:"endpoint"`
+	Status     string `json:"status"`
+	Message    string `json:"message"`
+	Duration   string `json:"duration"`
+	RetryCount int    `json:"retryCount,omitempty"` // Number of retries performed
 }
 
 // ExportData represents the complete export structure
