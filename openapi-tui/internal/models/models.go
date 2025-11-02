@@ -100,18 +100,20 @@ Password   string
 
 // Config holds application configuration
 type Config struct {
-BaseURL     string
-SpecPath    string
-VerboseMode bool
-Auth        *AuthConfig
+BaseURL        string
+SpecPath       string
+VerboseMode    bool
+Auth           *AuthConfig
+MaxConcurrency int  // Maximum number of concurrent test requests (0 = auto-detect)
 }
 
 // ConfigFile represents the YAML configuration file structure
 type ConfigFile struct {
-BaseURL     string `yaml:"baseUrl"`
-SpecPath    string `yaml:"specPath"`
-VerboseMode bool   `yaml:"verboseMode"`
-Auth        *struct {
+BaseURL        string `yaml:"baseUrl"`
+SpecPath       string `yaml:"specPath"`
+VerboseMode    bool   `yaml:"verboseMode"`
+MaxConcurrency int    `yaml:"maxConcurrency,omitempty"`
+Auth           *struct {
 Type       string `yaml:"type"`
 Token      string `yaml:"token,omitempty"`
 APIKeyIn   string `yaml:"apiKeyIn,omitempty"`

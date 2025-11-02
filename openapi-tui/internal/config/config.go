@@ -26,7 +26,8 @@ return filepath.Join(configDir, "config.yaml"), nil
 // LoadConfig loads configuration from the config file
 func LoadConfig() models.Config {
 cfg := models.Config{
-VerboseMode: false,
+VerboseMode:    false,
+MaxConcurrency: 0, // 0 = auto-detect
 }
 
 configPath, err := GetConfigPath()
@@ -47,6 +48,10 @@ return cfg
 cfg.BaseURL = fileConfig.BaseURL
 cfg.SpecPath = fileConfig.SpecPath
 cfg.VerboseMode = fileConfig.VerboseMode
+cfg.MaxConcurrency = fileConfig.MaxConcurrency
+if cfg.MaxConcurrency == 0 {
+cfg.MaxConcurrency = 0 // Keep 0 for auto-detect
+}
 
 if fileConfig.Auth != nil {
 cfg.Auth = &models.AuthConfig{
@@ -70,9 +75,10 @@ return err
 }
 
 fileConfig := models.ConfigFile{
-BaseURL:     cfg.BaseURL,
-SpecPath:    cfg.SpecPath,
-VerboseMode: cfg.VerboseMode,
+BaseURL:        cfg.BaseURL,
+SpecPath:       cfg.SpecPath,
+VerboseMode:    cfg.VerboseMode,
+MaxConcurrency: cfg.MaxConcurrency,
 }
 
 if cfg.Auth != nil {

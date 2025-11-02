@@ -249,7 +249,7 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.TestModel.Step = 2
 				m.TestModel.Testing = true
 				m.TestModel.TestStartTime = time.Now()
-				return m, testing.RunTestCmd(m.TestModel.SpecInput.Value(), m.TestModel.UrlInput.Value(), nil, m.VerboseMode)
+				return m, testing.RunTestParallelCmd(m.TestModel.SpecInput.Value(), m.TestModel.UrlInput.Value(), nil, m.VerboseMode, m.Config.MaxConcurrency)
 			case tea.KeyCtrlC, tea.KeyEsc:
 				m.Screen = models.MenuScreen
 				m.TestModel = ui.InitialTestModel()
