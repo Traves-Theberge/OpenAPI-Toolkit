@@ -1,6 +1,7 @@
 package ui
 
 import (
+"fmt"
 "github.com/charmbracelet/bubbles/spinner"
 "github.com/charmbracelet/bubbles/table"
 "github.com/charmbracelet/bubbles/textinput"
@@ -295,6 +296,24 @@ func InitialConfigEditorModel(cfg models.Config) models.ConfigEditorModel {
 		verboseTi.SetValue("false")
 	}
 
+	// Max Retries input
+	maxRetriesTi := textinput.New()
+	maxRetriesTi.Placeholder = "3 (default: 3 retries)"
+	maxRetriesTi.CharLimit = 2
+	maxRetriesTi.Width = 10
+	if cfg.MaxRetries > 0 {
+		maxRetriesTi.SetValue(fmt.Sprintf("%d", cfg.MaxRetries))
+	}
+
+	// Retry Delay input
+	retryDelayTi := textinput.New()
+	retryDelayTi.Placeholder = "1000 (milliseconds)"
+	retryDelayTi.CharLimit = 5
+	retryDelayTi.Width = 15
+	if cfg.RetryDelay > 0 {
+		retryDelayTi.SetValue(fmt.Sprintf("%d", cfg.RetryDelay))
+	}
+
 	// Focus first field
 	specPathTi.Focus()
 
@@ -310,6 +329,8 @@ func InitialConfigEditorModel(cfg models.Config) models.ConfigEditorModel {
 		PasswordInput:   passwordTi,
 		MaxConcurrInput: maxConcurrTi,
 		VerboseInput:    verboseTi,
+		MaxRetriesInput: maxRetriesTi,
+		RetryDelayInput: retryDelayTi,
 		OriginalConfig:  cfg,
 	}
 }

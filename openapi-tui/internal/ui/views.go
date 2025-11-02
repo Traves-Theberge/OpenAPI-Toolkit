@@ -900,6 +900,8 @@ func ViewConfigEditor(m models.Model) string {
 		"",
 		performanceHeader,
 		renderField("Max Concurrency", ce.MaxConcurrInput.View(), 9),
+		renderField("Max Retries", ce.MaxRetriesInput.View(), 10),
+		renderField("Retry Delay (ms)", ce.RetryDelayInput.View(), 11),
 	}
 
 	form := lipgloss.JoinVertical(lipgloss.Left, fields...)
@@ -911,7 +913,9 @@ func ViewConfigEditor(m models.Model) string {
 		MarginTop(1).
 		Render("Auth Type: none, bearer, apikey, or basic\n" +
 			"API Key Location: header or query\n" +
-			"Max Concurrency: 0 for auto-detect (uses CPU count, capped at 10)")
+			"Max Concurrency: 0 for auto-detect (uses CPU count, capped at 10)\n" +
+			"Max Retries: Number of retry attempts for failed requests (default: 3)\n" +
+			"Retry Delay: Initial delay in milliseconds between retries (default: 1000)")
 
 	// Instructions
 	instructions := lipgloss.NewStyle().

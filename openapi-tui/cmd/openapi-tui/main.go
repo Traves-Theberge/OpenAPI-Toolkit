@@ -530,13 +530,13 @@ func (m model) updateConfigEditor(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		ce.ValidationError = ""
 		return m, nil
 	case "tab", "down":
-		// Move to next field
-		ce.FocusedField = (ce.FocusedField + 1) % 10
+		// Move to next field (12 fields total now)
+		ce.FocusedField = (ce.FocusedField + 1) % 12
 		m.updateConfigEditorFocus()
 		return m, nil
 	case "shift+tab", "up":
-		// Move to previous field
-		ce.FocusedField = (ce.FocusedField - 1 + 10) % 10
+		// Move to previous field (12 fields total now)
+		ce.FocusedField = (ce.FocusedField - 1 + 12) % 12
 		m.updateConfigEditorFocus()
 		return m, nil
 	case "enter":
@@ -566,6 +566,10 @@ func (m model) updateConfigEditor(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		ce.PasswordInput, cmd = ce.PasswordInput.Update(msg)
 	case 9:
 		ce.MaxConcurrInput, cmd = ce.MaxConcurrInput.Update(msg)
+	case 10:
+		ce.MaxRetriesInput, cmd = ce.MaxRetriesInput.Update(msg)
+	case 11:
+		ce.RetryDelayInput, cmd = ce.RetryDelayInput.Update(msg)
 	}
 
 	return m, cmd
@@ -586,6 +590,8 @@ func (m *model) updateConfigEditorFocus() {
 	ce.UsernameInput.Blur()
 	ce.PasswordInput.Blur()
 	ce.MaxConcurrInput.Blur()
+	ce.MaxRetriesInput.Blur()
+	ce.RetryDelayInput.Blur()
 	
 	// Focus the current field
 	switch ce.FocusedField {
@@ -609,6 +615,10 @@ func (m *model) updateConfigEditorFocus() {
 		ce.PasswordInput.Focus()
 	case 9:
 		ce.MaxConcurrInput.Focus()
+	case 10:
+		ce.MaxRetriesInput.Focus()
+	case 11:
+		ce.RetryDelayInput.Focus()
 	}
 }
 
@@ -620,6 +630,8 @@ func (m model) saveConfig() (tea.Model, tea.Cmd) {
 	authType := strings.ToLower(strings.TrimSpace(ce.AuthTypeInput.Value()))
 	verbose := strings.ToLower(strings.TrimSpace(ce.VerboseInput.Value()))
 	maxConcurrStr := strings.TrimSpace(ce.MaxConcurrInput.Value())
+	maxRetriesStr := strings.TrimSpace(ce.MaxRetriesInput.Value())
+	retryDelayStr := strings.TrimSpace(ce.RetryDelayInput.Value())
 	
 	// Validate auth type
 	if authType != "" && authType != "none" && authType != "bearer" && authType != "apikey" && authType != "basic" {
@@ -646,6 +658,26 @@ func (m model) saveConfig() (tea.Model, tea.Cmd) {
 		}
 	}
 	
+	// Validate and parse max retries
+	maxRetries := 3 // default
+	if maxRetriesStr != "" {
+		parsed, err := fmt.Sscanf(maxRetriesStr, "%d", &maxRetries)
+		if err != nil || parsed != 1 || maxRetries < 0 || maxRetries > 10 {
+			ce.ValidationError = "Invalid max retries. Must be a number between 0 and 10"
+			return m, nil
+		}
+	}
+	
+	// Validate and parse retry delay
+	retryDelay := 1000 // default (ms)
+	if retryDelayStr != "" {
+		parsed, err := fmt.Sscanf(retryDelayStr, "%d", &retryDelay)
+		if err != nil || parsed != 1 || retryDelay < 100 || retryDelay > 30000 {
+			ce.ValidationError = "Invalid retry delay. Must be between 100 and 30000 milliseconds"
+			return m, nil
+		}
+	}
+	
 	// Validate API key settings
 	if authType == "apikey" {
 		apiKeyIn := strings.ToLower(strings.TrimSpace(ce.APIKeyInInput.Value()))
@@ -661,6 +693,8 @@ func (m model) saveConfig() (tea.Model, tea.Cmd) {
 		BaseURL:        strings.TrimSpace(ce.BaseURLInput.Value()),
 		VerboseMode:    verbose == "true",
 		MaxConcurrency: maxConcurrency,
+		MaxRetries:     maxRetries,
+		RetryDelay:     retryDelay,
 	}
 	
 	// Build auth config if auth type is set

@@ -216,6 +216,8 @@ type ConfigEditorModel struct {
 	PasswordInput     textinput.Model
 	MaxConcurrInput   textinput.Model
 	VerboseInput      textinput.Model
+	MaxRetriesInput   textinput.Model   // Retry configuration
+	RetryDelayInput   textinput.Model   // Retry delay in milliseconds
 	OriginalConfig    Config            // Store original config for cancel
 	ValidationError   string
 }
