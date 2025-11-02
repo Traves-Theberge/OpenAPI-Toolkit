@@ -24,6 +24,7 @@ export interface Config {
 
   // Execution
   parallel?: number;
+  retry?: number;
 
   // Validation
   validateSchema?: boolean;
@@ -137,6 +138,7 @@ function normalizeConfig(config: any): Config {
     'methods': 'methods',
     'paths': 'paths',
     'parallel': 'parallel',
+    'retry': 'retry',
 
     'validate-schema': 'validateSchema',
     'validateSchema': 'validateSchema',

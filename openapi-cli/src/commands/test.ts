@@ -40,6 +40,7 @@ interface TestOptions {
   paths?: string;
   parallel?: string;
   validateSchema?: boolean;
+  retry?: string;
 }
 
 export async function runTests(specPath: string, baseUrl: string, options: TestOptions = {}): Promise<void> {
@@ -849,6 +850,63 @@ function buildQueryParams(operation: any): string {
 }
 
 /**
+ * Sleep for a given number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if an error is retryable (network errors, not HTTP errors)
+ */
+function isRetryableError(error: any): boolean {
+  // Retry on network errors, connection errors, timeouts
+  if (error.code === 'ECONNREFUSED') return true;
+  if (error.code === 'ETIMEDOUT') return true;
+  if (error.code === 'ENOTFOUND') return true;
+  if (error.code === 'ECONNRESET') return true;
+  if (error.code === 'ENETUNREACH') return true;
+  if (error.message?.includes('timeout')) return true;
+  if (error.message?.includes('network')) return true;
+
+  // Don't retry on HTTP errors (4xx, 5xx)
+  return false;
+}
+
+/**
+ * Execute a function with retry logic and exponential backoff
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number,
+  verbose: boolean = false
+): Promise<T> {
+  let lastError: any;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      // Only retry if it's a retryable error and we have retries left
+      if (attempt < maxRetries && isRetryableError(error)) {
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt), 10000); // Max 10s
+        if (verbose) {
+          console.log(`  \x1b[33m↻\x1b[0m  Retry attempt ${attempt + 1}/${maxRetries} after ${backoffMs}ms...`);
+        }
+        await sleep(backoffMs);
+      } else {
+        // Either not retryable or out of retries
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
  * Validate response data against JSON schema
  */
 function validateResponseSchema(data: any, schema: any): { valid: boolean; errors: string[] } {
@@ -917,8 +975,10 @@ async function testEndpoint(
 
   const url = `${baseUrl}${processedPath}${queryString}`;
 
+  // Parse retry count
+  const maxRetries = authOptions.retry ? parseInt(authOptions.retry, 10) : 0;
+
   try {
-    let response: AxiosResponse;
     const startTime = Date.now();
 
     // Build request headers
@@ -959,49 +1019,58 @@ async function testEndpoint(
       headers: headers,
     };
 
-    switch (method) {
-      case 'GET':
-        response = await axios.get(url, config);
-        break;
-      case 'POST': {
-        // Generate body from schema or use example
-        const contentSchema = operation.requestBody?.content?.['application/json'];
-        const postBody = contentSchema?.example ||
-                        (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
-        response = await axios.post(url, postBody, config);
-        break;
-      }
-      case 'PUT': {
-        const contentSchema = operation.requestBody?.content?.['application/json'];
-        const putBody = contentSchema?.example ||
-                       (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
-        response = await axios.put(url, putBody, config);
-        break;
-      }
-      case 'PATCH': {
-        const contentSchema = operation.requestBody?.content?.['application/json'];
-        const patchBody = contentSchema?.example ||
+    // Execute request with retry logic
+    const executeRequest = async (): Promise<AxiosResponse> => {
+      switch (method) {
+        case 'GET':
+          return await axios.get(url, config);
+        case 'POST': {
+          // Generate body from schema or use example
+          const contentSchema = operation.requestBody?.content?.['application/json'];
+          const postBody = contentSchema?.example ||
+                          (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
+          return await axios.post(url, postBody, config);
+        }
+        case 'PUT': {
+          const contentSchema = operation.requestBody?.content?.['application/json'];
+          const putBody = contentSchema?.example ||
                          (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
-        response = await axios.patch(url, patchBody, config);
-        break;
+          return await axios.put(url, putBody, config);
+        }
+        case 'PATCH': {
+          const contentSchema = operation.requestBody?.content?.['application/json'];
+          const patchBody = contentSchema?.example ||
+                           (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
+          return await axios.patch(url, patchBody, config);
+        }
+        case 'DELETE':
+          return await axios.delete(url, config);
+        case 'HEAD':
+          return await axios.head(url, config);
+        case 'OPTIONS':
+          return await axios.options(url, config);
+        default:
+          throw new Error('Unsupported HTTP method');
       }
-      case 'DELETE':
-        response = await axios.delete(url, config);
-        break;
-      case 'HEAD':
-        response = await axios.head(url, config);
-        break;
-      case 'OPTIONS':
-        response = await axios.options(url, config);
-        break;
-      default:
-        return {
-          method,
-          endpoint: processedPath,
-          status: null,
-          success: false,
-          message: `Unsupported HTTP method`,
-        };
+    };
+
+    let response: AxiosResponse;
+    if (maxRetries > 0) {
+      response = await withRetry(executeRequest, maxRetries, verbose);
+    } else {
+      response = await executeRequest();
+    }
+
+    // Check if method is supported
+    if (method !== 'GET' && method !== 'POST' && method !== 'PUT' &&
+        method !== 'PATCH' && method !== 'DELETE' && method !== 'HEAD' && method !== 'OPTIONS') {
+      return {
+        method,
+        endpoint: processedPath,
+        status: null,
+        success: false,
+        message: `Unsupported HTTP method`,
+      };
     }
 
     const duration = Date.now() - startTime;

@@ -15,6 +15,7 @@ interface TestOptions {
     paths?: string;
     parallel?: string;
     validateSchema?: boolean;
+    retry?: string;
 }
 export declare function runTests(specPath: string, baseUrl: string, options?: TestOptions): Promise<void>;
 export {};

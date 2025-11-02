@@ -762,6 +762,61 @@ function buildQueryParams(operation) {
     return queryParams.length > 0 ? '?' + queryParams.join('&') : '';
 }
 /**
+ * Sleep for a given number of milliseconds
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+/**
+ * Check if an error is retryable (network errors, not HTTP errors)
+ */
+function isRetryableError(error) {
+    // Retry on network errors, connection errors, timeouts
+    if (error.code === 'ECONNREFUSED')
+        return true;
+    if (error.code === 'ETIMEDOUT')
+        return true;
+    if (error.code === 'ENOTFOUND')
+        return true;
+    if (error.code === 'ECONNRESET')
+        return true;
+    if (error.code === 'ENETUNREACH')
+        return true;
+    if (error.message?.includes('timeout'))
+        return true;
+    if (error.message?.includes('network'))
+        return true;
+    // Don't retry on HTTP errors (4xx, 5xx)
+    return false;
+}
+/**
+ * Execute a function with retry logic and exponential backoff
+ */
+async function withRetry(fn, maxRetries, verbose = false) {
+    let lastError;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        }
+        catch (error) {
+            lastError = error;
+            // Only retry if it's a retryable error and we have retries left
+            if (attempt < maxRetries && isRetryableError(error)) {
+                const backoffMs = Math.min(1000 * Math.pow(2, attempt), 10000); // Max 10s
+                if (verbose) {
+                    console.log(`  \x1b[33m↻\x1b[0m  Retry attempt ${attempt + 1}/${maxRetries} after ${backoffMs}ms...`);
+                }
+                await sleep(backoffMs);
+            }
+            else {
+                // Either not retryable or out of retries
+                throw error;
+            }
+        }
+    }
+    throw lastError;
+}
+/**
  * Validate response data against JSON schema
  */
 function validateResponseSchema(data, schema) {
@@ -818,8 +873,9 @@ async function testEndpoint(baseUrl, pathStr, method, operation, verbose = false
         queryString = queryString ? `${queryString}&${queryParam}` : `?${queryParam}`;
     }
     const url = `${baseUrl}${processedPath}${queryString}`;
+    // Parse retry count
+    const maxRetries = authOptions.retry ? parseInt(authOptions.retry, 10) : 0;
     try {
-        let response;
         const startTime = Date.now();
         // Build request headers
         const headers = {};
@@ -853,49 +909,57 @@ async function testEndpoint(baseUrl, pathStr, method, operation, verbose = false
             validateStatus: () => true, // Don't throw on any status code
             headers: headers,
         };
-        switch (method) {
-            case 'GET':
-                response = await axios_1.default.get(url, config);
-                break;
-            case 'POST': {
-                // Generate body from schema or use example
-                const contentSchema = operation.requestBody?.content?.['application/json'];
-                const postBody = contentSchema?.example ||
-                    (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
-                response = await axios_1.default.post(url, postBody, config);
-                break;
+        // Execute request with retry logic
+        const executeRequest = async () => {
+            switch (method) {
+                case 'GET':
+                    return await axios_1.default.get(url, config);
+                case 'POST': {
+                    // Generate body from schema or use example
+                    const contentSchema = operation.requestBody?.content?.['application/json'];
+                    const postBody = contentSchema?.example ||
+                        (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
+                    return await axios_1.default.post(url, postBody, config);
+                }
+                case 'PUT': {
+                    const contentSchema = operation.requestBody?.content?.['application/json'];
+                    const putBody = contentSchema?.example ||
+                        (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
+                    return await axios_1.default.put(url, putBody, config);
+                }
+                case 'PATCH': {
+                    const contentSchema = operation.requestBody?.content?.['application/json'];
+                    const patchBody = contentSchema?.example ||
+                        (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
+                    return await axios_1.default.patch(url, patchBody, config);
+                }
+                case 'DELETE':
+                    return await axios_1.default.delete(url, config);
+                case 'HEAD':
+                    return await axios_1.default.head(url, config);
+                case 'OPTIONS':
+                    return await axios_1.default.options(url, config);
+                default:
+                    throw new Error('Unsupported HTTP method');
             }
-            case 'PUT': {
-                const contentSchema = operation.requestBody?.content?.['application/json'];
-                const putBody = contentSchema?.example ||
-                    (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
-                response = await axios_1.default.put(url, putBody, config);
-                break;
-            }
-            case 'PATCH': {
-                const contentSchema = operation.requestBody?.content?.['application/json'];
-                const patchBody = contentSchema?.example ||
-                    (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
-                response = await axios_1.default.patch(url, patchBody, config);
-                break;
-            }
-            case 'DELETE':
-                response = await axios_1.default.delete(url, config);
-                break;
-            case 'HEAD':
-                response = await axios_1.default.head(url, config);
-                break;
-            case 'OPTIONS':
-                response = await axios_1.default.options(url, config);
-                break;
-            default:
-                return {
-                    method,
-                    endpoint: processedPath,
-                    status: null,
-                    success: false,
-                    message: `Unsupported HTTP method`,
-                };
+        };
+        let response;
+        if (maxRetries > 0) {
+            response = await withRetry(executeRequest, maxRetries, verbose);
+        }
+        else {
+            response = await executeRequest();
+        }
+        // Check if method is supported
+        if (method !== 'GET' && method !== 'POST' && method !== 'PUT' &&
+            method !== 'PATCH' && method !== 'DELETE' && method !== 'HEAD' && method !== 'OPTIONS') {
+            return {
+                method,
+                endpoint: processedPath,
+                status: null,
+                success: false,
+                message: `Unsupported HTTP method`,
+            };
         }
         const duration = Date.now() - startTime;
         let success = response.status >= 200 && response.status < 300;

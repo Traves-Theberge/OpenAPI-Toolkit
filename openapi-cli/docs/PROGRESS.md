@@ -1,8 +1,8 @@
 # OpenAPI CLI Development Progress
 
-## Project Status: Phase 3 - 80% Complete (12/15 Features) 🚀
+## Project Status: Phase 3 - 87% Complete (13/15 Features) 🚀
 
-The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows with advanced features including parallel execution, schema-based testing, response validation, multiple export formats, and configuration file support.
+The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows with advanced features including parallel execution, schema-based testing, response validation, retry logic with exponential backoff, multiple export formats, and configuration file support.
 
 ---
 
@@ -380,29 +380,41 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 - **Documentation**: Comprehensive README section with examples, error types, use cases, configuration
 - **Performance**: Minimal overhead (~10-50ms per response)
 
+#### 13. Retry Logic
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - `-r` / `--retry <count>` flag to set max retry attempts
+  - Exponential backoff algorithm (1s, 2s, 4s, 8s, max 10s)
+  - Only retries network errors (ECONNREFUSED, ETIMEDOUT, ENOTFOUND, ECONNRESET, ENETUNREACH)
+  - Does NOT retry HTTP errors (4xx, 5xx)
+  - Retry indicator displayed with ↻ symbol in verbose mode
+  - Sleep function for backoff delays
+  - isRetryableError() function to determine if error should be retried
+  - withRetry() higher-order function wraps requests with retry logic
+  - Refactored testEndpoint() to extract HTTP request into executeRequest() closure
+- **Files**: `src/commands/test.ts` (lines 43, 852-907, 979, 1022-1062), `src/cli.ts` (lines 51, 70), `src/config.ts` (lines 27, 141)
+- **Functions**: `sleep()`, `isRetryableError()`, `withRetry()`, `executeRequest()` closure
+- **Retry Strategy**: Exponential backoff with formula: min(1000 * 2^attempt, 10000)
+- **Use Cases**: Unstable networks, rate limiting, service warmup, CI/CD reliability, dev server restarts
+- **Testing**: Tested with connection refused (localhost:9999), verified exponential backoff, tested with/without retry, unit tests pass
+- **Documentation**: Comprehensive README section with retry logic, error types, performance impact, best practices
+- **Performance**: No overhead when no failures; adds time only on retries (1s, 3s total, 7s total for 1-3 retries)
+
 ---
 
-### 🚀 Planned Features (3 remaining)
-
-#### Medium Priority
-
-1. **Retry Logic** ⭐
-   - `--retry <count>` flag
-   - Exponential backoff
-   - Only retry on network errors (not 4xx/5xx)
-   - **Complexity**: Medium
-   - **Impact**: Low
+### 🚀 Planned Features (2 remaining)
 
 #### Low Priority
 
-2. **Watch Mode** ⭐
+1. **Watch Mode** ⭐
     - `--watch` flag
     - Re-run on spec file changes
     - Development workflow
     - **Complexity**: Medium
     - **Impact**: Low
 
-3. **Progress Bar** ⭐
+2. **Progress Bar** ⭐
     - Show progress during long test runs
     - "Testing 5/50 endpoints..."
     - Spinner animation

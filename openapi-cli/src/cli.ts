@@ -48,6 +48,7 @@ program
   .option('-p, --paths <pattern>', 'Filter by path pattern (supports * wildcard, e.g., /users/*)')
   .option('--parallel <limit>', 'Run tests in parallel with concurrency limit (default: 5)', '5')
   .option('--validate-schema', 'Validate response bodies against OpenAPI schemas')
+  .option('-r, --retry <count>', 'Retry failed requests with exponential backoff (default: 0)', '0')
   .action(async (spec: string, baseUrl: string, options: {
     config?: string;
     export?: string;
@@ -66,6 +67,7 @@ program
     paths?: string;
     parallel?: string;
     validateSchema?: boolean;
+    retry?: string;
   }) => {
     try {
       // Load config file if specified or search for one

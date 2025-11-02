@@ -28,6 +28,7 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **JUnit XML Export** - Generate JUnit XML reports for CI/CD integration (--export-junit)
 - **Configuration File Support** - Store default options in YAML or JSON config files (--config)
 - **Response Schema Validation** - Validate API responses against OpenAPI schemas (--validate-schema)
+- **Retry Logic** - Automatically retry failed requests with exponential backoff (--retry)
 
 ## Installation
 
@@ -1162,6 +1163,108 @@ export-junit: "schema-validation-results.xml"
 **Performance:**
 
 Schema validation adds minimal overhead (~10-50ms per response depending on complexity). Use sparingly for large test suites or disable for performance testing.
+
+### Retry Logic
+
+Automatically retry failed requests with exponential backoff to handle transient network errors and improve test reliability.
+
+**Basic Usage:**
+```bash
+# Retry failed requests up to 3 times
+openapi-test test spec.yaml https://api.example.com --retry 3
+
+# Short form
+openapi-test test spec.yaml https://api.example.com -r 3
+
+# Combine with verbose to see retry attempts
+openapi-test test spec.yaml https://api.example.com --retry 3 --verbose
+```
+
+**How It Works:**
+
+The CLI automatically retries requests that fail with network errors using exponential backoff:
+
+1. **First retry**: Wait 1 second
+2. **Second retry**: Wait 2 seconds
+3. **Third retry**: Wait 4 seconds
+4. **Fourth retry**: Wait 8 seconds
+5. **Maximum**: 10 seconds between retries
+
+**Retryable Errors:**
+
+Only network and connection errors are retried (not HTTP errors):
+
+- `ECONNREFUSED` - Connection refused
+- `ETIMEDOUT` - Request timeout
+- `ENOTFOUND` - DNS lookup failed
+- `ECONNRESET` - Connection reset
+- `ENETUNREACH` - Network unreachable
+- Network timeout errors
+
+**Non-Retryable:**
+
+HTTP errors (4xx, 5xx) are **NOT** retried:
+- `401 Unauthorized` - Authentication issue, won't resolve with retry
+- `404 Not Found` - Resource doesn't exist
+- `500 Internal Server Error` - Server-side issue
+- Other 4xx/5xx errors
+
+**Retry Output:**
+
+When retries occur, you'll see progress indicators:
+
+```bash
+🧪 Testing API: My API
+📍 Base URL: https://api.example.com
+
+  ↻  Retry attempt 1/3 after 1000ms...
+  ↻  Retry attempt 2/3 after 2000ms...
+✓ GET     /users                                   - 200 OK
+```
+
+**Configuration:**
+
+Enable in config file:
+
+```yaml
+# .openapi-cli.yaml
+retry: 3
+verbose: true
+timeout: 15000
+```
+
+**Use Cases:**
+
+- **Unstable Networks**: Retry on flaky connections
+- **Rate Limiting**: Handle temporary rate limit errors
+- **Service Warmup**: Retry when services are starting up
+- **CI/CD**: Improve test reliability in CI/CD pipelines
+- **Development**: Handle local dev server restarts
+
+**Performance Impact:**
+
+Retries add time when failures occur:
+- **No failures**: No impact (0ms overhead)
+- **1 retry**: Adds 1 second
+- **2 retries**: Adds 3 seconds total (1s + 2s)
+- **3 retries**: Adds 7 seconds total (1s + 2s + 4s)
+
+**Best Practices:**
+
+1. **Use sparingly**: Only enable when needed (flaky networks, dev environments)
+2. **Combine with timeout**: Set appropriate `--timeout` to fail fast
+3. **Verbose mode**: Use `--verbose` to see retry attempts
+4. **CI/CD**: Consider `--retry 2` for CI/CD to handle transient failures
+5. **Don't over-retry**: More than 3 retries is usually excessive
+
+**Notes:**
+
+- Retry count of 0 (default) disables retries
+- Exponential backoff prevents overwhelming failed services
+- Maximum backoff capped at 10 seconds
+- Retries are per-request, not per-test
+- Works with parallel execution (`--parallel`)
+- Compatible with all other options
 
 ### Error Handling
 
