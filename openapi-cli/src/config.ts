@@ -25,6 +25,9 @@ export interface Config {
   // Execution
   parallel?: number;
 
+  // Validation
+  validateSchema?: boolean;
+
   // Export
   export?: string;
   exportHtml?: string;
@@ -134,6 +137,10 @@ function normalizeConfig(config: any): Config {
     'methods': 'methods',
     'paths': 'paths',
     'parallel': 'parallel',
+
+    'validate-schema': 'validateSchema',
+    'validateSchema': 'validateSchema',
+    'validate_schema': 'validateSchema',
 
     'export': 'export',
     'export-html': 'exportHtml',

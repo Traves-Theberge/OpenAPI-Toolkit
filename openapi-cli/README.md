@@ -27,6 +27,7 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **HTML Export** - Generate beautiful, styled HTML reports for test results (--export-html)
 - **JUnit XML Export** - Generate JUnit XML reports for CI/CD integration (--export-junit)
 - **Configuration File Support** - Store default options in YAML or JSON config files (--config)
+- **Response Schema Validation** - Validate API responses against OpenAPI schemas (--validate-schema)
 
 ## Installation
 
@@ -1052,6 +1053,115 @@ openapi-test test spec.yaml https://api.example.com -H "X-Custom: value"
 - JSON format is more strict but easier to generate programmatically
 - Config files are searched up the directory tree (like .gitignore)
 - Use `.openapi-cli.yaml` prefix to hide from directory listings
+
+### Response Schema Validation
+
+Validate API response bodies against the schemas defined in your OpenAPI specification to ensure your API returns correctly structured data.
+
+**Basic Usage:**
+```bash
+# Enable schema validation
+openapi-test test spec.yaml https://api.example.com --validate-schema
+
+# Combine with other options
+openapi-test test spec.yaml https://api.example.com \
+  --validate-schema \
+  --verbose \
+  --export-junit results.xml
+```
+
+**How It Works:**
+
+The CLI validates responses against the schema defined in the OpenAPI spec:
+
+```yaml
+paths:
+  /users/{id}:
+    get:
+      responses:
+        '200':
+          description: User object
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                  - email
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+```
+
+**Validation Features:**
+
+- **Type Checking**: Validates data types (string, number, integer, boolean, object, array)
+- **Required Fields**: Ensures required properties are present
+- **Constraints**: Validates min/max values, min/max length, patterns
+- **Enums**: Checks values are in allowed list
+- **Formats**: Validates email, uri, date, date-time, uuid formats
+- **Additional Properties**: Detects unexpected properties
+- **Nested Objects**: Recursively validates nested structures
+- **Arrays**: Validates array items against schemas
+
+**Error Reporting:**
+
+When validation fails, detailed error messages are shown:
+
+```bash
+✗ GET     /users/1                                 - Schema validation failed: 3 error(s)
+  ⚠  /name: expected type string, got number
+  ⚠  /email: must be valid email format
+  ⚠  root: missing required property 'age'
+```
+
+**Error Types:**
+
+- `expected type X, got Y` - Type mismatch
+- `missing required property 'X'` - Missing required field
+- `value must be one of [...]` - Enum violation
+- `must match pattern X` - Regex pattern mismatch
+- `must be valid X format` - Format validation failed (email, uri, etc.)
+- `additional property 'X' not allowed` - Unexpected property
+- `must be <= X` / `must be >= X` - Min/max constraint violation
+
+**Use Cases:**
+
+- **API Contract Testing**: Ensure backend follows OpenAPI contract
+- **Regression Testing**: Detect schema changes in API responses
+- **Integration Testing**: Validate third-party API responses
+- **Development**: Catch schema mismatches early in development
+- **CI/CD**: Automate API contract verification in pipelines
+
+**Configuration:**
+
+Enable in config file:
+
+```yaml
+# .openapi-cli.yaml
+validate-schema: true
+verbose: true
+export-junit: "schema-validation-results.xml"
+```
+
+**Notes:**
+
+- Validation only runs on successful HTTP responses (2xx status codes)
+- Uses JSON Schema validation via AJV library
+- Follows OpenAPI 3.x schema specification
+- Supports $ref references within schemas
+- Partial validation: tests continue even if some fail
+- Schema errors count as test failures in summary
+
+**Performance:**
+
+Schema validation adds minimal overhead (~10-50ms per response depending on complexity). Use sparingly for large test suites or disable for performance testing.
 
 ### Error Handling
 

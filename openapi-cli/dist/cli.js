@@ -45,6 +45,7 @@ program
     .option('-q, --quiet', 'Quiet mode - only show errors and final exit code')
     .option('-p, --paths <pattern>', 'Filter by path pattern (supports * wildcard, e.g., /users/*)')
     .option('--parallel <limit>', 'Run tests in parallel with concurrency limit (default: 5)', '5')
+    .option('--validate-schema', 'Validate response bodies against OpenAPI schemas')
     .action(async (spec, baseUrl, options) => {
     try {
         // Load config file if specified or search for one

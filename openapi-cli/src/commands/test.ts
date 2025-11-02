@@ -2,6 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import * as path from 'path';
+import Ajv from 'ajv';
 
 interface OpenAPISpec {
   openapi: string;
@@ -19,6 +20,7 @@ interface TestResult {
   timestamp?: string;
   requestHeaders?: Record<string, string>;
   responseHeaders?: Record<string, string>;
+  schemaErrors?: string[];
 }
 
 interface TestOptions {
@@ -37,6 +39,7 @@ interface TestOptions {
   quiet?: boolean;
   paths?: string;
   parallel?: string;
+  validateSchema?: boolean;
 }
 
 export async function runTests(specPath: string, baseUrl: string, options: TestOptions = {}): Promise<void> {
@@ -116,6 +119,12 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
         failureCount++;
         // Always show errors even in quiet mode
         console.log(`\x1b[31m✗\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.message}`);
+        // Show schema errors if present
+        if (result.schemaErrors && result.schemaErrors.length > 0) {
+          for (const error of result.schemaErrors) {
+            console.log(`  \x1b[33m⚠\x1b[0m  ${error}`);
+          }
+        }
       }
     }
   } else {
@@ -139,6 +148,12 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
         failureCount++;
         // Always show errors even in quiet mode
         console.log(`\x1b[31m✗\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.message}`);
+        // Show schema errors if present
+        if (result.schemaErrors && result.schemaErrors.length > 0) {
+          for (const error of result.schemaErrors) {
+            console.log(`  \x1b[33m⚠\x1b[0m  ${error}`);
+          }
+        }
       }
     }
   }
@@ -833,6 +848,52 @@ function buildQueryParams(operation: any): string {
   return queryParams.length > 0 ? '?' + queryParams.join('&') : '';
 }
 
+/**
+ * Validate response data against JSON schema
+ */
+function validateResponseSchema(data: any, schema: any): { valid: boolean; errors: string[] } {
+  const ajv = new Ajv({ allErrors: true, strict: false });
+  const validate = ajv.compile(schema);
+  const valid = validate(data);
+
+  if (valid) {
+    return { valid: true, errors: [] };
+  }
+
+  const errors: string[] = [];
+  if (validate.errors) {
+    for (const error of validate.errors) {
+      const path = error.instancePath || 'root';
+      const message = error.message || 'validation error';
+
+      let errorMsg = `${path}: ${message}`;
+
+      // Add more context based on error type
+      if (error.keyword === 'type') {
+        errorMsg = `${path}: expected type ${error.params.type}, got ${typeof data}`;
+      } else if (error.keyword === 'required') {
+        errorMsg = `${path}: missing required property '${error.params.missingProperty}'`;
+      } else if (error.keyword === 'enum') {
+        errorMsg = `${path}: value must be one of ${JSON.stringify(error.params.allowedValues)}`;
+      } else if (error.keyword === 'minimum' || error.keyword === 'maximum') {
+        errorMsg = `${path}: ${message} (limit: ${error.params.limit})`;
+      } else if (error.keyword === 'minLength' || error.keyword === 'maxLength') {
+        errorMsg = `${path}: ${message} (limit: ${error.params.limit})`;
+      } else if (error.keyword === 'pattern') {
+        errorMsg = `${path}: must match pattern ${error.params.pattern}`;
+      } else if (error.keyword === 'format') {
+        errorMsg = `${path}: must be valid ${error.params.format} format`;
+      } else if (error.keyword === 'additionalProperties') {
+        errorMsg = `${path}: additional property '${error.params.additionalProperty}' not allowed`;
+      }
+
+      errors.push(errorMsg);
+    }
+  }
+
+  return { valid: false, errors };
+}
+
 async function testEndpoint(
   baseUrl: string,
   pathStr: string,
@@ -944,17 +1005,39 @@ async function testEndpoint(
     }
 
     const duration = Date.now() - startTime;
-    const success = response.status >= 200 && response.status < 300;
+    let success = response.status >= 200 && response.status < 300;
+    let message = success ? 'OK' : `HTTP ${response.status} ${response.statusText}`;
+    let schemaErrors: string[] | undefined;
+
+    // Validate response schema if enabled
+    if (authOptions.validateSchema && success) {
+      const responseSchema = operation.responses?.[response.status]?.content?.['application/json']?.schema ||
+                             operation.responses?.['200']?.content?.['application/json']?.schema ||
+                             operation.responses?.default?.content?.['application/json']?.schema;
+
+      if (responseSchema) {
+        const validationResult = validateResponseSchema(response.data, responseSchema);
+        if (!validationResult.valid) {
+          success = false;
+          schemaErrors = validationResult.errors;
+          message = `Schema validation failed: ${validationResult.errors.length} error(s)`;
+        }
+      }
+    }
 
     const result: TestResult = {
       method,
       endpoint: processedPath,
       status: response.status,
       success,
-      message: success ? 'OK' : `HTTP ${response.status} ${response.statusText}`,
+      message,
       duration,
       timestamp: new Date().toISOString(),
     };
+
+    if (schemaErrors) {
+      result.schemaErrors = schemaErrors;
+    }
 
     // Add headers if verbose mode is enabled
     if (verbose) {

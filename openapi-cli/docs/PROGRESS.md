@@ -1,8 +1,8 @@
 # OpenAPI CLI Development Progress
 
-## Project Status: Phase 3 - 73% Complete (11/15 Features) 🚀
+## Project Status: Phase 3 - 80% Complete (12/15 Features) 🚀
 
-The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows with advanced features including parallel execution, schema-based testing, multiple export formats, and configuration file support.
+The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows with advanced features including parallel execution, schema-based testing, response validation, multiple export formats, and configuration file support.
 
 ---
 
@@ -359,20 +359,34 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 - **Documentation**: Comprehensive README section with examples, use cases, and config file templates
 - **Example Files**: `.openapi-cli.example.yaml` with all options documented
 
+#### 12. Response Schema Validation
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - `--validate-schema` flag to enable response validation
+  - Validates response bodies against OpenAPI schema definitions
+  - Uses AJV (JSON Schema validator) with strict mode disabled
+  - Validates successful responses (2xx) against defined schemas
+  - Falls back to 200, default, or matching status code schema
+  - Detailed error reporting with path and error type
+  - Schema errors displayed with warning symbol (⚠)
+  - Marks test as failed if schema validation fails
+  - Supports all JSON Schema features: types, required, constraints, enums, formats, patterns
+- **Files**: `src/commands/test.ts` (lines 5, 23, 42, 839-883, 949-968, 980-982, 121-128, 144-151), `src/cli.ts` (lines 50, 68), `src/config.ts` (lines 28-29, 141-143)
+- **Functions**: `validateResponseSchema()` - validates data against schema, returns errors
+- **Error Types**: Type mismatches, missing required fields, enum violations, pattern mismatches, format errors, additional properties, min/max violations
+- **Use Cases**: API contract testing, regression testing, integration testing, development validation, CI/CD contract verification
+- **Testing**: Tested with JSONPlaceholder API, validated passing and failing schemas, tested additionalProperties detection, unit tests pass
+- **Documentation**: Comprehensive README section with examples, error types, use cases, configuration
+- **Performance**: Minimal overhead (~10-50ms per response)
+
 ---
 
-### 🚀 Planned Features (4 remaining)
+### 🚀 Planned Features (3 remaining)
 
 #### Medium Priority
 
-1. **Response Schema Validation** ⭐⭐
-   - Validate response bodies against schema
-   - Report schema mismatches
-   - Detailed validation errors
-   - **Complexity**: High (requires OpenAPI parser)
-   - **Impact**: High
-
-2. **Retry Logic** ⭐
+1. **Retry Logic** ⭐
    - `--retry <count>` flag
    - Exponential backoff
    - Only retry on network errors (not 4xx/5xx)
@@ -381,14 +395,14 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 #### Low Priority
 
-3. **Watch Mode** ⭐
+2. **Watch Mode** ⭐
     - `--watch` flag
     - Re-run on spec file changes
     - Development workflow
     - **Complexity**: Medium
     - **Impact**: Low
 
-4. **Progress Bar** ⭐
+3. **Progress Bar** ⭐
     - Show progress during long test runs
     - "Testing 5/50 endpoints..."
     - Spinner animation

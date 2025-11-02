@@ -1,0 +1,69 @@
+openapi: 3.0.0
+info:
+  title: Schema Validation Test API
+  version: 1.0.0
+paths:
+  /users/{id}:
+    get:
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User object
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                  - email
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                    minLength: 1
+                  email:
+                    type: string
+                    format: email
+                  age:
+                    type: integer
+                    minimum: 0
+                    maximum: 150
+                additionalProperties: true
+  /posts/{id}:
+    get:
+      summary: Get post by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Post object
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - userId
+                  - id
+                  - title
+                  - body
+                properties:
+                  userId:
+                    type: integer
+                  id:
+                    type: integer
+                  title:
+                    type: string
+                  body:
+                    type: string

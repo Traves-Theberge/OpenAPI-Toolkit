@@ -14,6 +14,7 @@ interface TestOptions {
     quiet?: boolean;
     paths?: string;
     parallel?: string;
+    validateSchema?: boolean;
 }
 export declare function runTests(specPath: string, baseUrl: string, options?: TestOptions): Promise<void>;
 export {};
