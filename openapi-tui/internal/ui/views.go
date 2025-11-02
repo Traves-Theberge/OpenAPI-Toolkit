@@ -247,6 +247,10 @@ func ViewTest(m models.Model) string {
 			// Show enhanced testing error with actionable suggestions
 			content = errors.FormatEnhancedError(m.TestModel.Err)
 		} else {
+			// Calculate and display summary statistics
+			stats := CalculateStats(m.TestModel.Results)
+			statsView := FormatStats(stats)
+
 			// Populate table with test results
 			var rows []table.Row
 			for _, r := range m.TestModel.Results {
@@ -254,11 +258,13 @@ func ViewTest(m models.Model) string {
 			}
 			m.TestModel.Table.SetRows(rows)
 
-			// Show success message and results table
+			// Show success message, stats, and results table
 			content = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#4ECDC4")).
 				Bold(true).
-				Render("✅ Testing Complete!") + "\n\n" + m.TestModel.Table.View()
+				Render("✅ Testing Complete!") + "\n\n" + 
+				statsView + "\n\n" +
+				m.TestModel.Table.View()
 			
 			// Show export success message if results were exported
 			if m.TestModel.ExportSuccess != "" {
