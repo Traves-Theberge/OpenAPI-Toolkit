@@ -1,0 +1,90 @@
+{
+  "timestamp": "2024-01-15T14:32:45Z",
+  "specPath": "openapi.yaml",
+  "baseUrl": "https://api.example.com",
+  "totalTests": 5,
+  "passed": 4,
+  "failed": 1,
+  "results": [
+    {
+      "method": "GET",
+      "endpoint": "/users",
+      "status": "200",
+      "statusCode": 200,
+      "message": "OK (validated)",
+      "duration": "123.456ms",
+      "timestamp": "2024-01-15T14:32:45Z",
+      "requestUrl": "https://api.example.com/users?page=1&limit=10",
+      "requestHeaders": {
+        "Accept": "application/json",
+        "Authorization": "Bearer token123"
+      },
+      "responseHeaders": {
+        "Content-Type": "application/json",
+        "X-RateLimit-Remaining": "99"
+      }
+    },
+    {
+      "method": "GET",
+      "endpoint": "/users/{id}",
+      "status": "200",
+      "statusCode": 200,
+      "message": "OK (validated)",
+      "duration": "89.123ms",
+      "timestamp": "2024-01-15T14:32:46Z",
+      "requestUrl": "https://api.example.com/users/1",
+      "requestHeaders": {
+        "Accept": "application/json",
+        "Authorization": "Bearer token123"
+      },
+      "responseHeaders": {
+        "Content-Type": "application/json"
+      }
+    },
+    {
+      "method": "POST",
+      "endpoint": "/users",
+      "status": "201",
+      "statusCode": 201,
+      "message": "Created",
+      "duration": "234.567ms",
+      "timestamp": "2024-01-15T14:32:47Z",
+      "requestUrl": "https://api.example.com/users",
+      "requestHeaders": {
+        "Accept": "application/json",
+        "Authorization": "Bearer token123",
+        "Content-Type": "application/json"
+      },
+      "responseHeaders": {
+        "Content-Type": "application/json",
+        "Location": "/users/123"
+      }
+    },
+    {
+      "method": "DELETE",
+      "endpoint": "/users/{id}",
+      "status": "204",
+      "statusCode": 204,
+      "message": "No Content",
+      "duration": "45.678ms",
+      "timestamp": "2024-01-15T14:32:48Z",
+      "requestUrl": "https://api.example.com/users/1",
+      "requestHeaders": {
+        "Authorization": "Bearer token123"
+      },
+      "responseHeaders": {}
+    },
+    {
+      "method": "GET",
+      "endpoint": "/invalid",
+      "status": "ERR",
+      "statusCode": 0,
+      "message": "connection refused",
+      "duration": "",
+      "timestamp": "2024-01-15T14:32:49Z",
+      "requestUrl": "https://api.example.com/invalid",
+      "requestHeaders": {},
+      "responseHeaders": {}
+    }
+  ]
+}
