@@ -1152,3 +1152,164 @@ func TestAuthIntegration(t *testing.T) {
 		})
 	}
 }
+
+// TestExportResults tests exporting test results to JSON
+func TestExportResults(t *testing.T) {
+	// Create sample test results
+	results := []testResult{
+		{
+			method:   "GET",
+			endpoint: "/users",
+			status:   "200",
+			message:  "OK",
+			duration: 100000000, // 100ms
+		},
+		{
+			method:   "POST",
+			endpoint: "/users",
+			status:   "201",
+			message:  "Created",
+			duration: 150000000, // 150ms
+		},
+		{
+			method:   "GET",
+			endpoint: "/invalid",
+			status:   "ERR",
+			message:  "connection failed",
+			duration: 0,
+		},
+	}
+
+	// Export to temporary directory
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+	defer os.Chdir(origDir)
+
+	tmpDir := t.TempDir()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change to temp directory: %v", err)
+	}
+
+	// Run export
+	err = exportResults(results, "openapi.yaml", "http://localhost:8080")
+	if err != nil {
+		t.Fatalf("exportResults failed: %v", err)
+	}
+
+	// Find exported file
+	files, err := filepath.Glob("openapi-test-results-*.json")
+	if err != nil {
+		t.Fatalf("Failed to find exported file: %v", err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("Expected 1 exported file, found %d", len(files))
+	}
+
+	// Read and parse exported file
+	data, err := os.ReadFile(files[0])
+	if err != nil {
+		t.Fatalf("Failed to read exported file: %v", err)
+	}
+
+	var exported exportData
+	if err := json.Unmarshal(data, &exported); err != nil {
+		t.Fatalf("Failed to parse exported JSON: %v", err)
+	}
+
+	// Verify exported data
+	if exported.SpecPath != "openapi.yaml" {
+		t.Errorf("Expected specPath 'openapi.yaml', got '%s'", exported.SpecPath)
+	}
+	if exported.BaseURL != "http://localhost:8080" {
+		t.Errorf("Expected baseUrl 'http://localhost:8080', got '%s'", exported.BaseURL)
+	}
+	if exported.TotalTests != 3 {
+		t.Errorf("Expected totalTests 3, got %d", exported.TotalTests)
+	}
+	if exported.Passed != 2 {
+		t.Errorf("Expected passed 2, got %d", exported.Passed)
+	}
+	if exported.Failed != 1 {
+		t.Errorf("Expected failed 1, got %d", exported.Failed)
+	}
+	if len(exported.Results) != 3 {
+		t.Fatalf("Expected 3 results, got %d", len(exported.Results))
+	}
+
+	// Verify first result
+	r := exported.Results[0]
+	if r.Method != "GET" {
+		t.Errorf("Expected method 'GET', got '%s'", r.Method)
+	}
+	if r.Endpoint != "/users" {
+		t.Errorf("Expected endpoint '/users', got '%s'", r.Endpoint)
+	}
+	if r.StatusCode != 200 {
+		t.Errorf("Expected statusCode 200, got %d", r.StatusCode)
+	}
+	if r.Duration == "" {
+		t.Error("Expected duration to be set")
+	}
+
+	// Verify error result
+	r = exported.Results[2]
+	if r.Status != "ERR" {
+		t.Errorf("Expected status 'ERR', got '%s'", r.Status)
+	}
+	if r.StatusCode != 0 {
+		t.Errorf("Expected statusCode 0 for error, got %d", r.StatusCode)
+	}
+}
+
+// TestExportResultsEmpty tests exporting empty results
+func TestExportResultsEmpty(t *testing.T) {
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+	defer os.Chdir(origDir)
+
+	tmpDir := t.TempDir()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change to temp directory: %v", err)
+	}
+
+	// Export empty results
+	err = exportResults([]testResult{}, "spec.yaml", "http://localhost")
+	if err != nil {
+		t.Fatalf("exportResults failed: %v", err)
+	}
+
+	// Find exported file
+	files, err := filepath.Glob("openapi-test-results-*.json")
+	if err != nil {
+		t.Fatalf("Failed to find exported file: %v", err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("Expected 1 exported file, found %d", len(files))
+	}
+
+	// Read and parse
+	data, err := os.ReadFile(files[0])
+	if err != nil {
+		t.Fatalf("Failed to read exported file: %v", err)
+	}
+
+	var exported exportData
+	if err := json.Unmarshal(data, &exported); err != nil {
+		t.Fatalf("Failed to parse exported JSON: %v", err)
+	}
+
+	// Verify counts are zero
+	if exported.TotalTests != 0 {
+		t.Errorf("Expected totalTests 0, got %d", exported.TotalTests)
+	}
+	if exported.Passed != 0 {
+		t.Errorf("Expected passed 0, got %d", exported.Passed)
+	}
+	if exported.Failed != 0 {
+		t.Errorf("Expected failed 0, got %d", exported.Failed)
+	}
+}

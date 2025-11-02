@@ -61,16 +61,17 @@ type testResultMsg struct {
 
 // testModel manages the multi-step API testing workflow
 type testModel struct {
-	step      int                // Current step: 0=file input, 1=URL input, 2=testing, 3=results
-	specInput textinput.Model    // Text input for OpenAPI spec file path
-	urlInput  textinput.Model    // Text input for base API URL
-	spinner   spinner.Model      // Loading spinner for async operations
-	table     table.Model        // Results table display
-	err       error              // Testing error (if any)
-	result    string             // Result message
-	done      bool               // Whether testing is complete
-	testing   bool               // Whether testing is currently in progress
-	results   []testResult       // Array of test results
+	step          int                // Current step: 0=file input, 1=URL input, 2=testing, 3=results
+	specInput     textinput.Model    // Text input for OpenAPI spec file path
+	urlInput      textinput.Model    // Text input for base API URL
+	spinner       spinner.Model      // Loading spinner for async operations
+	table         table.Model        // Results table display
+	err           error              // Testing error (if any)
+	result        string             // Result message
+	done          bool               // Whether testing is complete
+	testing       bool               // Whether testing is currently in progress
+	results       []testResult       // Array of test results
+	exportSuccess string             // Export success message (if exported)
 }
 
 // testResult represents a single API endpoint test result
@@ -451,6 +452,104 @@ func saveConfig(cfg config) error {
 	return os.WriteFile(configPath, data, 0644)
 }
 
+// exportResult represents a single test result in export format
+type exportResult struct {
+	Method      string            `json:"method"`
+	Endpoint    string            `json:"endpoint"`
+	Status      string            `json:"status"`
+	StatusCode  int               `json:"statusCode,omitempty"`
+	Message     string            `json:"message"`
+	Duration    string            `json:"duration,omitempty"`
+	Timestamp   string            `json:"timestamp,omitempty"`
+	RequestURL  string            `json:"requestUrl,omitempty"`
+	RequestHeaders  map[string]string `json:"requestHeaders,omitempty"`
+	ResponseHeaders map[string]string `json:"responseHeaders,omitempty"`
+}
+
+// exportData represents the complete export structure
+type exportData struct {
+	Timestamp  string         `json:"timestamp"`
+	SpecPath   string         `json:"specPath"`
+	BaseURL    string         `json:"baseUrl"`
+	TotalTests int            `json:"totalTests"`
+	Passed     int            `json:"passed"`
+	Failed     int            `json:"failed"`
+	Results    []exportResult `json:"results"`
+}
+
+// exportResults exports test results to a JSON file
+func exportResults(results []testResult, specPath, baseURL string) error {
+	// Calculate statistics
+	passed := 0
+	failed := 0
+	for _, r := range results {
+		if r.status != "ERR" && !strings.Contains(r.message, "failed") {
+			passed++
+		} else {
+			failed++
+		}
+	}
+	
+	// Convert results to export format
+	exportResults := make([]exportResult, 0, len(results))
+	for _, r := range results {
+		er := exportResult{
+			Method:   r.method,
+			Endpoint: r.endpoint,
+			Status:   r.status,
+			Message:  r.message,
+		}
+		
+		// Parse status code if available
+		if r.status != "ERR" {
+			fmt.Sscanf(r.status, "%d", &er.StatusCode)
+		}
+		
+		// Add duration if available
+		if r.duration > 0 {
+			er.Duration = r.duration.String()
+		}
+		
+		// Add verbose log details if available
+		if r.logEntry != nil {
+			er.Timestamp = r.logEntry.timestamp.Format(time.RFC3339)
+			er.RequestURL = r.logEntry.requestURL
+			er.RequestHeaders = r.logEntry.requestHeaders
+			er.ResponseHeaders = r.logEntry.responseHeaders
+		}
+		
+		exportResults = append(exportResults, er)
+	}
+	
+	// Create export data structure
+	data := exportData{
+		Timestamp:  time.Now().Format(time.RFC3339),
+		SpecPath:   specPath,
+		BaseURL:    baseURL,
+		TotalTests: len(results),
+		Passed:     passed,
+		Failed:     failed,
+		Results:    exportResults,
+	}
+	
+	// Marshal to JSON
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal results: %v", err)
+	}
+	
+	// Generate filename with timestamp
+	filename := fmt.Sprintf("openapi-test-results-%s.json", 
+		time.Now().Format("2006-01-02-150405"))
+	
+	// Write to file
+	if err := os.WriteFile(filename, jsonData, 0644); err != nil {
+		return fmt.Errorf("failed to write file: %v", err)
+	}
+	
+	return nil
+}
+
 // model is the main application state, containing all sub-models and UI state
 type model struct {
 	cursor       int           // Currently selected menu item (0-3)
@@ -706,6 +805,23 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case 3: // Results display
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
+			switch msg.String() {
+			case "e":
+				// Export results to JSON file
+				if len(m.testModel.results) > 0 {
+					specPath := m.testModel.specInput.Value()
+					baseURL := m.testModel.urlInput.Value()
+					if err := exportResults(m.testModel.results, specPath, baseURL); err != nil {
+						m.testModel.err = enhanceFileError(err, "export file")
+					} else {
+						// Update message to show export success
+						filename := fmt.Sprintf("openapi-test-results-%s.json", 
+							time.Now().Format("2006-01-02-150405"))
+						m.testModel.exportSuccess = fmt.Sprintf("✅ Exported to %s", filename)
+					}
+				}
+				return m, nil
+			}
 			switch msg.Type {
 			case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
 				// Return to menu and reset test state
@@ -981,11 +1097,19 @@ func (m model) viewTest() string {
 				Foreground(lipgloss.Color("#4ECDC4")).
 				Bold(true).
 				Render("✅ Testing Complete!") + "\n\n" + m.testModel.table.View()
+			
+			// Show export success message if results were exported
+			if m.testModel.exportSuccess != "" {
+				content += "\n\n" + lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#4ECDC4")).
+					Render(m.testModel.exportSuccess)
+			}
 		}
-		// Add exit instruction
+		// Add instructions
+		instructions := "Press 'e' to export results | Enter to return to menu"
 		content += "\n\n" + lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#888")).
-			Render("Press Enter to return to menu")
+			Render(instructions)
 	}
 
 	// Center the entire content with dynamic sizing and border
