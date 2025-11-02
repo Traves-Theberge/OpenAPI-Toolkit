@@ -167,7 +167,7 @@ All Tests:       PASSING ✅
 - Custom request editing
 - And 11+ more features!
 
-## Phase 2: Developer Experience (5 of 15 Complete) 🚀
+## Phase 2: Developer Experience (6 of 15 Complete) 🚀
 
 ### ✅ Completed Features (Phase 2)
 
@@ -263,11 +263,37 @@ All Tests:       PASSING ✅
   - Clear separation of concerns
   - Enables future growth without monolithic file
 
+#### 6. Summary Statistics
+- **Status**: Complete ✅
+- **Implementation**:
+  - `stats.go` (159 lines) - Statistics calculation and formatting
+    - `TestStats` type with comprehensive metrics
+    - `CalculateStats()` - Computes totals, pass/fail, timing stats
+    - `FormatStats()` - Styled display with colors
+    - `formatDuration()` - Human-readable time formatting
+  - Integrated into test results view (step 3)
+  - Displays before results table
+- **Features**:
+  - ✅ Total tests, passed, failed counts
+  - ✅ Pass rate percentage with color coding (green/yellow/red)
+  - ✅ Timing statistics: total, average, fastest, slowest
+  - ✅ Identifies fastest and slowest endpoints
+  - ✅ Smart duration formatting (µs, ms, s)
+- **Test Coverage**: 3 test functions, 12 test cases
+  - `TestCalculateStats` - 5 scenarios (empty, all passed, mixed, all failed, zero durations)
+  - `TestFormatDuration` - 5 time formats
+  - `TestFormatStats` - Rendering validation
+- **Impact**: 
+  - At-a-glance view of test suite health
+  - Quickly identify performance outliers
+  - Better understanding of API response times
+  - Professional reporting similar to jest/pytest
+
 ## Summary
 
 **Phase 1 Status**: ✅ COMPLETE (5/5 features - 100%)
-**Phase 2 Status**: 🚀 IN PROGRESS (5/15 features - 33%)
-**Test Coverage**: 17/18 tests passing (1 skipped)
+**Phase 2 Status**: 🚀 IN PROGRESS (6/15 features - 40%)
+**Test Coverage**: 24 tests passing (7 new stats tests + 17 existing, 1 skipped)
 **Build Status**: ✅ All tests passing, binary builds successfully
 **Code Organization**: ✅ Standard Go project layout (cmd/ + internal/)
 **Documentation**: ✅ README, ARCHITECTURE, and PROGRESS fully updated
@@ -286,5 +312,6 @@ The application now:
 - ✅ **Standard Go project layout with modular architecture**
 
 **Phase 1 Achievement**: All critical foundation features delivered! 🎉
-**Phase 2 Progress**: 5/15 features complete - DevEx improvements rolling out! 🚀
+**Phase 2 Progress**: 6/15 features complete (40%) - DevEx improvements rolling out! 🚀
 **Architecture**: Refactored to standard Go layout (cmd/ + internal/ packages)
+**Latest Feature**: Summary statistics with pass rates and timing analysis 📊
