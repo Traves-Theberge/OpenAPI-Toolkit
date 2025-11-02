@@ -42,7 +42,7 @@ export async function validateSpec(filePath: string): Promise<void> {
       path: 'openapi',
       message: 'Missing required field "openapi"',
     });
-  } else if (!spec.openapi.startsWith('3.')) {
+  } else if (typeof spec.openapi !== 'string' || !spec.openapi.startsWith('3.')) {
     errors.push({
       path: 'openapi',
       message: `Unsupported OpenAPI version: ${spec.openapi}. Only OpenAPI 3.x is supported`,

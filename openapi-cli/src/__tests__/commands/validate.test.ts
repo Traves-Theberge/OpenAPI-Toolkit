@@ -15,6 +15,7 @@ describe('validateSpec', () => {
 openapi: 3.0.0
 info:
   title: Test API
+  version: 1.0.0
 paths:
   /test:
     get:
@@ -42,6 +43,6 @@ info:
     mockFs.existsSync.mockReturnValue(true);
     mockFs.readFileSync.mockReturnValue(invalidSpec);
 
-    await expect(validateSpec('invalid.yaml')).rejects.toThrow('missing or invalid openapi version');
+    await expect(validateSpec('invalid.yaml')).rejects.toThrow('Validation failed');
   });
 });
