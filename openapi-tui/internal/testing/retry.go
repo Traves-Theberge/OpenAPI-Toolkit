@@ -45,7 +45,7 @@ func isRetryableError(err error, statusCode int) bool {
 
 		// TLS/SSL errors that might be temporary
 		if strings.Contains(errStr, "tls handshake") ||
-			strings.Contains(errStr, "EOF") {
+			strings.Contains(errStr, "eof") {
 			return true
 		}
 	}
