@@ -1,4 +1,4 @@
-# OpenAPI CLI Tester
+# OpenAPI CLI
 
 A professional command-line tool for validating OpenAPI specifications and testing APIs against them.
 
