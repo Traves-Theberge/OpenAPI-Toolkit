@@ -1,0 +1,91 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+  description: Simple test API for TUI testing
+
+servers:
+  - url: https://jsonplaceholder.typicode.com
+    description: Free fake API for testing
+
+paths:
+  /posts:
+    get:
+      summary: Get all posts
+      operationId: getPosts
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  
+  /posts/{id}:
+    get:
+      summary: Get a post by ID
+      operationId: getPost
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Post not found
+    
+    post:
+      summary: Create a post
+      operationId: createPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+                userId:
+                  type: integer
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /users:
+    get:
+      summary: Get all users
+      operationId: getUsers
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object

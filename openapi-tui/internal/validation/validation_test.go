@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -475,4 +476,230 @@ func TestDrainAndCloseResponse(t *testing.T) {
 	}
 	drainAndCloseResponse(resp)
 	// Should not panic
+}
+
+// TestValidateResponse_NilOperation tests ValidateResponse with nil operation
+func TestValidateResponse_NilOperation(t *testing.T) {
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewReader([]byte(`{}`))),
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+	}
+	
+	// Call with nil operation - should still return a result (marks as valid since no spec)
+	result := ValidateResponse(resp, nil, 200)
+	// The function returns Valid=true when operation is nil (no spec to validate against)
+	if !result.Valid {
+		t.Error("Expected validation to pass with nil operation (no spec to validate)")
+	}
+}
+
+// TestValidateResponse_NilResponses tests ValidateResponse with operation but no responses
+func TestValidateResponse_NilResponses(t *testing.T) {
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewReader([]byte(`{}`))),
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+	}
+	operation := &openapi3.Operation{
+		Responses: nil,
+	}
+	
+	// Call with nil responses - should return valid (no spec to validate against)
+	result := ValidateResponse(resp, operation, 200)
+	if !result.Valid {
+		t.Error("Expected validation to pass with nil responses (no spec to validate)")
+	}
+}
+
+// TestValidateResponse_DefaultResponseFallback tests ValidateResponse falling back to default response
+func TestValidateResponse_DefaultResponseFallback(t *testing.T) {
+	// Use a 404 status that's not explicitly defined, should fall back to default
+	resp := &http.Response{
+		StatusCode: 404,
+		Body:       io.NopCloser(bytes.NewReader([]byte(`{"error":"not found"}`))),
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+	}
+	
+	// Create responses with only default and 200
+	responses := openapi3.NewResponses()
+	desc200 := "OK"
+	descDefault := "Default error response"
+	responses.Set("200", &openapi3.ResponseRef{
+		Value: &openapi3.Response{
+			Description: &desc200,
+		},
+	})
+	responses.Set("default", &openapi3.ResponseRef{
+		Value: &openapi3.Response{
+			Description: &descDefault,
+			Content: openapi3.Content{
+				"application/json": &openapi3.MediaType{
+					Schema: &openapi3.SchemaRef{
+						Value: openapi3.NewObjectSchema().WithProperty("error", openapi3.NewStringSchema()),
+					},
+				},
+			},
+		},
+	})
+	
+	operation := &openapi3.Operation{
+		Responses: responses,
+	}
+	
+	result := ValidateResponse(resp, operation, 404)
+	// Should use default response for validation
+	if !result.Valid {
+		t.Errorf("Expected validation to succeed with default response: %v", result.SchemaErrors)
+	}
+	if result.ExpectedStatus != "default" {
+		t.Errorf("Expected ExpectedStatus='default', got '%s'", result.ExpectedStatus)
+	}
+}
+
+// TestValidateResponse_MismatchedContentType tests ValidateResponse with wrong content-type
+func TestValidateResponse_MismatchedContentType(t *testing.T) {
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewReader([]byte(`<xml>data</xml>`))),
+		Header:     http.Header{"Content-Type": []string{"application/xml"}}, // XML instead of JSON
+	}
+	
+	desc := "Success"
+	responseWithContent := &openapi3.Response{
+		Description: &desc,
+		Content: openapi3.Content{
+			"application/json": &openapi3.MediaType{
+				Schema: &openapi3.SchemaRef{
+					Value: openapi3.NewObjectSchema(),
+				},
+			},
+		},
+	}
+	
+	responses := openapi3.NewResponses()
+	responses.Set("200", &openapi3.ResponseRef{Value: responseWithContent})
+	
+	operation := &openapi3.Operation{
+		Responses: responses,
+	}
+	
+	result := ValidateResponse(resp, operation, 200)
+	if result.Valid {
+		t.Error("Expected validation to fail with mismatched content-type")
+	}
+	hasContentTypeError := false
+	for _, err := range result.SchemaErrors {
+		if strings.Contains(strings.ToLower(err), "content-type") {
+			hasContentTypeError = true
+			break
+		}
+	}
+	if !hasContentTypeError {
+		t.Errorf("Expected content-type error in validation results, got: %v", result.SchemaErrors)
+	}
+}
+
+// TestValidateStatusCode_Ranges tests various status code ranges and exact matches
+func TestValidateStatusCode_Ranges(t *testing.T) {
+	tests := []struct {
+		name             string
+		statusCode       int
+		definedStatus    string
+		shouldBeValid    bool
+		expectedStatus   string
+	}{
+		{
+			name:           "1xx range match",
+			statusCode:     101,
+			definedStatus:  "1XX",
+			shouldBeValid:  true,
+			expectedStatus: "101",
+		},
+		{
+			name:           "2xx range match",
+			statusCode:     204,
+			definedStatus:  "2XX",
+			shouldBeValid:  true,
+			expectedStatus: "204",
+		},
+		{
+			name:           "3xx range match",
+			statusCode:     304,
+			definedStatus:  "3XX",
+			shouldBeValid:  true,
+			expectedStatus: "304",
+		},
+		{
+			name:           "4xx range match",
+			statusCode:     404,
+			definedStatus:  "4XX",
+			shouldBeValid:  true,
+			expectedStatus: "404",
+		},
+		{
+			name:           "5xx range match",
+			statusCode:     503,
+			definedStatus:  "5XX",
+			shouldBeValid:  true,
+			expectedStatus: "503",
+		},
+		{
+			name:           "exact match",
+			statusCode:     200,
+			definedStatus:  "200",
+			shouldBeValid:  true,
+			expectedStatus: "200",
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			responses := openapi3.NewResponses()
+			desc := "test"
+			responses.Set(tt.definedStatus, &openapi3.ResponseRef{
+				Value: &openapi3.Response{Description: &desc},
+			})
+			
+			operation := &openapi3.Operation{
+				Responses: responses,
+			}
+			
+			valid, status := validateStatusCode(tt.statusCode, operation)
+			if valid != tt.shouldBeValid {
+				t.Errorf("Expected valid=%v for status %d with defined %s, got %v", 
+					tt.shouldBeValid, tt.statusCode, tt.definedStatus, valid)
+			}
+			if valid && status != tt.expectedStatus {
+				t.Errorf("Expected status=%s, got %s", tt.expectedStatus, status)
+			}
+		})
+	}
+}
+
+// TestValidateStatusCode_WithDefault tests default response handling
+func TestValidateStatusCode_WithDefault(t *testing.T) {
+	responses := openapi3.NewResponses()
+	desc200 := "OK"
+	descDefault := "Default"
+	responses.Set("200", &openapi3.ResponseRef{
+		Value: &openapi3.Response{Description: &desc200},
+	})
+	responses.Set("default", &openapi3.ResponseRef{
+		Value: &openapi3.Response{Description: &descDefault},
+	})
+	
+	operation := &openapi3.Operation{
+		Responses: responses,
+	}
+	
+	// Try 404 which is not defined but has default
+	valid, status := validateStatusCode(404, operation)
+	if !valid {
+		t.Error("Expected valid=true when default response exists")
+	}
+	// Should match either "404" (from Status()) or "default" (from Map())
+	if status != "404" && status != "default" {
+		t.Errorf("Expected status '404' or 'default', got '%s'", status)
+	}
 }
