@@ -8,7 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
@@ -1311,5 +1313,225 @@ func TestExportResultsEmpty(t *testing.T) {
 	}
 	if exported.Failed != 0 {
 		t.Errorf("Expected failed 0, got %d", exported.Failed)
+	}
+}
+
+// TestViewLogDetail tests the log detail view formatting
+func TestViewLogDetail(t *testing.T) {
+	// Create a test result with log entry
+	result := testResult{
+		method:   "POST",
+		endpoint: "/users",
+		status:   "201",
+		message:  "Created",
+		duration: 150 * time.Millisecond,
+	}
+
+	log := &logEntry{
+		requestURL:  "https://api.example.com/users",
+		timestamp:   time.Date(2024, 1, 15, 14, 30, 0, 0, time.UTC),
+		duration:    150 * time.Millisecond,
+		requestHeaders: map[string]string{
+			"Authorization": "Bearer token123",
+			"Content-Type":  "application/json",
+		},
+		requestBody: `{"name":"John Doe","email":"john@example.com"}`,
+		responseHeaders: map[string]string{
+			"Content-Type": "application/json",
+			"Location":     "/users/123",
+		},
+		responseBody: `{"id":123,"name":"John Doe","email":"john@example.com"}`,
+	}
+
+	result.logEntry = log
+
+	// Create model with verbose mode enabled
+	m := model{
+		verboseMode: true,
+		width:       120,
+		height:      40,
+	}
+
+	// Call viewLogDetail
+	output := m.viewLogDetail(result, log)
+
+	// Verify output contains key information
+	if !strings.Contains(output, "POST /users") {
+		t.Error("Expected output to contain 'POST /users'")
+	}
+	if !strings.Contains(output, "https://api.example.com/users") {
+		t.Error("Expected output to contain request URL")
+	}
+	if !strings.Contains(output, "Bearer token123") {
+		t.Error("Expected output to contain Authorization header")
+	}
+	if !strings.Contains(output, `"name":"John Doe"`) {
+		t.Error("Expected output to contain request body")
+	}
+	if !strings.Contains(output, "201") {
+		t.Error("Expected output to contain status code")
+	}
+	if !strings.Contains(output, "Created") {
+		t.Error("Expected output to contain status message")
+	}
+	if !strings.Contains(output, "/users/123") {
+		t.Error("Expected output to contain Location header")
+	}
+	if !strings.Contains(output, `"id":123`) {
+		t.Error("Expected output to contain response body")
+	}
+	if !strings.Contains(output, "150ms") {
+		t.Error("Expected output to contain duration")
+	}
+}
+
+// TestViewLogDetailWithEmptyData tests log detail view with minimal data
+func TestViewLogDetailWithEmptyData(t *testing.T) {
+	result := testResult{
+		method:   "GET",
+		endpoint: "/health",
+		status:   "200",
+		message:  "OK",
+	}
+
+	log := &logEntry{
+		requestURL:      "https://api.example.com/health",
+		timestamp:       time.Now(),
+		duration:        50 * time.Millisecond,
+		requestHeaders:  map[string]string{},
+		responseHeaders: map[string]string{},
+		requestBody:     "",
+		responseBody:    "",
+	}
+
+	m := model{
+		verboseMode: true,
+	}
+
+	output := m.viewLogDetail(result, log)
+
+	// Should still render without errors
+	if !strings.Contains(output, "GET /health") {
+		t.Error("Expected output to contain 'GET /health'")
+	}
+	if !strings.Contains(output, "https://api.example.com/health") {
+		t.Error("Expected output to contain request URL")
+	}
+	if !strings.Contains(output, "200") {
+		t.Error("Expected output to contain status code")
+	}
+}
+
+// TestLogDetailKeyBinding tests the 'l' key binding behavior
+func TestLogDetailKeyBinding(t *testing.T) {
+	// Create model with test results and verbose mode
+	m := initialModel()
+	m.verboseMode = true
+	m.screen = testScreen
+	m.testModel.step = 3 // Results view
+	m.testModel.results = []testResult{
+		{
+			method:   "GET",
+			endpoint: "/users",
+			status:   "200",
+			message:  "OK",
+			logEntry: &logEntry{
+				requestURL:      "https://api.example.com/users",
+				timestamp:       time.Now(),
+				duration:        100 * time.Millisecond,
+				requestHeaders:  map[string]string{"Accept": "application/json"},
+				responseHeaders: map[string]string{"Content-Type": "application/json"},
+			},
+		},
+	}
+
+	// Manually call updateTest with 'l' key since table navigation is complex in tests
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}}
+	updatedModel, _ := m.updateTest(keyMsg)
+	m = updatedModel.(model)
+
+	// Verify state changed to log detail view
+	if m.testModel.step != 4 {
+		t.Errorf("Expected step 4 (log detail), got step %d", m.testModel.step)
+	}
+	if !m.testModel.showingLog {
+		t.Error("Expected showingLog to be true")
+	}
+	if m.testModel.selectedLog != 0 {
+		t.Errorf("Expected selectedLog to be 0, got %d", m.testModel.selectedLog)
+	}
+
+	// Simulate Esc key press to return to results
+	escMsg := tea.KeyMsg{Type: tea.KeyEsc}
+	updatedModel, _ = m.updateTest(escMsg)
+	m = updatedModel.(model)
+
+	if m.testModel.step != 3 {
+		t.Errorf("Expected to return to step 3 (results), got step %d", m.testModel.step)
+	}
+	if m.testModel.showingLog {
+		t.Error("Expected showingLog to be false after Esc")
+	}
+}
+
+// TestLogDetailWithoutVerboseMode tests that 'l' key does nothing without verbose mode
+func TestLogDetailWithoutVerboseMode(t *testing.T) {
+	m := initialModel()
+	m.verboseMode = false // Verbose mode OFF
+	m.screen = testScreen
+	m.testModel.step = 3
+	m.testModel.results = []testResult{
+		{
+			method:   "GET",
+			endpoint: "/users",
+			status:   "200",
+			message:  "OK",
+			logEntry: &logEntry{
+				requestURL: "https://api.example.com/users",
+			},
+		},
+	}
+
+	// Simulate 'l' key press
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}}
+	updatedModel, _ := m.updateTest(keyMsg)
+	m = updatedModel.(model)
+
+	// Should remain in step 3 (results)
+	if m.testModel.step != 3 {
+		t.Errorf("Expected to remain in step 3, got step %d", m.testModel.step)
+	}
+	if m.testModel.showingLog {
+		t.Error("Expected showingLog to remain false without verbose mode")
+	}
+}
+
+// TestLogDetailWithNoLogEntry tests 'l' key when result has no log data
+func TestLogDetailWithNoLogEntry(t *testing.T) {
+	m := initialModel()
+	m.verboseMode = true
+	m.screen = testScreen
+	m.testModel.step = 3
+	m.testModel.results = []testResult{
+		{
+			method:   "GET",
+			endpoint: "/users",
+			status:   "200",
+			message:  "OK",
+			logEntry: nil, // No log entry
+		},
+	}
+
+	// Simulate 'l' key press
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}}
+	updatedModel, _ := m.updateTest(keyMsg)
+	m = updatedModel.(model)
+
+	// Should remain in step 3 since no log data available
+	if m.testModel.step != 3 {
+		t.Errorf("Expected to remain in step 3, got step %d", m.testModel.step)
+	}
+	if m.testModel.showingLog {
+		t.Error("Expected showingLog to remain false when no log entry")
 	}
 }
