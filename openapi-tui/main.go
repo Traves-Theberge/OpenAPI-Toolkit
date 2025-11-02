@@ -97,6 +97,221 @@ type authConfig struct {
 	password string // For basic auth
 }
 
+// enhancedError provides detailed error information with actionable suggestions
+type enhancedError struct {
+	title       string   // Short error title
+	description string   // Detailed error description
+	suggestions []string // Actionable suggestions for fixing
+	original    error    // Original error for reference
+}
+
+// Error implements the error interface
+func (e *enhancedError) Error() string {
+	msg := fmt.Sprintf("%s: %s", e.title, e.description)
+	if len(e.suggestions) > 0 {
+		msg += "\n\nSuggestions:"
+		for _, s := range e.suggestions {
+			msg += "\n  • " + s
+		}
+	}
+	return msg
+}
+
+// formatEnhancedError creates a styled error message for display
+func formatEnhancedError(err error) string {
+	if enhanced, ok := err.(*enhancedError); ok {
+		errorStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("9")). // Red
+			Bold(true)
+		
+		suggestionStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("11")) // Yellow
+		
+		msg := errorStyle.Render("❌ " + enhanced.title)
+		msg += "\n\n" + enhanced.description
+		
+		if len(enhanced.suggestions) > 0 {
+			msg += "\n\n" + suggestionStyle.Render("💡 Suggestions:")
+			for _, s := range enhanced.suggestions {
+				msg += "\n  • " + s
+			}
+		}
+		return msg
+	}
+	
+	// Fallback for regular errors
+	return lipgloss.NewStyle().
+		Foreground(lipgloss.Color("9")).
+		Render("❌ Error: " + err.Error())
+}
+
+// enhanceFileError wraps file-related errors with helpful suggestions
+func enhanceFileError(err error, filePath string) error {
+	if err == nil {
+		return nil
+	}
+	
+	errStr := err.Error()
+	
+	// File not found
+	if strings.Contains(errStr, "no such file") || strings.Contains(errStr, "cannot find") {
+		return &enhancedError{
+			title:       "File Not Found",
+			description: fmt.Sprintf("Could not find the file: %s", filePath),
+			suggestions: []string{
+				"Check if the file path is correct",
+				"Use an absolute path (e.g., /home/user/spec.yaml)",
+				"Verify the file exists using 'ls' command",
+				"Make sure you have read permissions for the file",
+			},
+			original: err,
+		}
+	}
+	
+	// Permission denied
+	if strings.Contains(errStr, "permission denied") {
+		return &enhancedError{
+			title:       "Permission Denied",
+			description: fmt.Sprintf("Cannot read file: %s", filePath),
+			suggestions: []string{
+				"Check file permissions with 'ls -l'",
+				"Try running with appropriate permissions",
+				"Make sure you own the file or have read access",
+			},
+			original: err,
+		}
+	}
+	
+	// Parse errors
+	if strings.Contains(errStr, "yaml") || strings.Contains(errStr, "unmarshal") {
+		return &enhancedError{
+			title:       "Invalid File Format",
+			description: "The file is not a valid OpenAPI specification",
+			suggestions: []string{
+				"Ensure the file is valid YAML or JSON",
+				"Check for syntax errors (quotes, indentation)",
+				"Validate YAML at https://www.yamllint.com/",
+				"Make sure it's an OpenAPI 3.x specification",
+			},
+			original: err,
+		}
+	}
+	
+	return err
+}
+
+// enhanceNetworkError wraps network-related errors with helpful suggestions
+func enhanceNetworkError(err error, url string) error {
+	if err == nil {
+		return nil
+	}
+	
+	errStr := err.Error()
+	
+	// Connection refused
+	if strings.Contains(errStr, "connection refused") {
+		return &enhancedError{
+			title:       "Connection Refused",
+			description: fmt.Sprintf("Cannot connect to: %s", url),
+			suggestions: []string{
+				"Check if the server is running",
+				"Verify the URL and port are correct",
+				"Check firewall settings",
+				"Try pinging the host to verify connectivity",
+			},
+			original: err,
+		}
+	}
+	
+	// Timeout
+	if strings.Contains(errStr, "timeout") || strings.Contains(errStr, "deadline exceeded") {
+		return &enhancedError{
+			title:       "Request Timeout",
+			description: "The server took too long to respond",
+			suggestions: []string{
+				"Check your internet connection",
+				"The server might be overloaded - try again later",
+				"Verify the URL points to the correct endpoint",
+				"Check if the server is experiencing issues",
+			},
+			original: err,
+		}
+	}
+	
+	// DNS resolution failure
+	if strings.Contains(errStr, "no such host") || strings.Contains(errStr, "dns") {
+		return &enhancedError{
+			title:       "DNS Resolution Failed",
+			description: fmt.Sprintf("Cannot resolve hostname: %s", url),
+			suggestions: []string{
+				"Check if the URL is spelled correctly",
+				"Verify your DNS settings",
+				"Try using the IP address directly",
+				"Check your internet connection",
+			},
+			original: err,
+		}
+	}
+	
+	// TLS/SSL errors
+	if strings.Contains(errStr, "tls") || strings.Contains(errStr, "certificate") {
+		return &enhancedError{
+			title:       "TLS/SSL Error",
+			description: "Cannot establish secure connection",
+			suggestions: []string{
+				"The server's SSL certificate might be invalid",
+				"Check if the URL should use 'http' instead of 'https'",
+				"Verify the server's certificate is up to date",
+				"Try accessing the URL in a browser first",
+			},
+			original: err,
+		}
+	}
+	
+	return err
+}
+
+// enhanceValidationError wraps validation errors with helpful suggestions
+func enhanceValidationError(err error) error {
+	if err == nil {
+		return nil
+	}
+	
+	errStr := err.Error()
+	
+	// Missing required fields
+	if strings.Contains(errStr, "required") {
+		return &enhancedError{
+			title:       "Validation Failed",
+			description: "The OpenAPI specification is missing required fields",
+			suggestions: []string{
+				"Check that all required fields are present (openapi, info, paths)",
+				"Verify the spec follows OpenAPI 3.x format",
+				"Use a linter like Spectral to validate your spec",
+				"See OpenAPI specification at https://spec.openapis.org/",
+			},
+			original: err,
+		}
+	}
+	
+	// Version mismatch
+	if strings.Contains(errStr, "version") || strings.Contains(errStr, "openapi") {
+		return &enhancedError{
+			title:       "Unsupported Version",
+			description: "This tool only supports OpenAPI 3.x specifications",
+			suggestions: []string{
+				"Check the 'openapi' field in your spec",
+				"If using Swagger 2.0, convert it to OpenAPI 3.x",
+				"Use https://converter.swagger.io/ for conversion",
+				"Ensure 'openapi' field starts with '3.' (e.g., '3.0.3')",
+			},
+			original: err,
+		}
+	}
+	
+	return err
+}
+
 // model is the main application state, containing all sub-models and UI state
 type model struct {
 	cursor       int           // Currently selected menu item (0-3)
@@ -473,11 +688,8 @@ func (m model) viewValidate() string {
 	// Show validation results if completed
 	if m.validateModel.done {
 		if m.validateModel.err != nil {
-			// Display validation error in red
-			content = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#FF6B6B")).
-				Bold(true).
-				Render(fmt.Sprintf("❌ Validation Failed:\n%s", m.validateModel.err.Error()))
+			// Display enhanced validation error with suggestions
+			content = formatEnhancedError(m.validateModel.err)
 		} else {
 			// Display success message in green
 			content = lipgloss.NewStyle().
@@ -498,10 +710,8 @@ func (m model) viewValidate() string {
 			Render("> " + m.validateModel.textInput.View())
 
 		if m.validateModel.err != nil {
-			// Show input error
-			content = input + "\n\n" + lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#FF6B6B")).
-				Render(fmt.Sprintf("Error: %s", m.validateModel.err.Error()))
+			// Show enhanced input error with suggestions
+			content = input + "\n\n" + formatEnhancedError(m.validateModel.err)
 		} else {
 			// Show input instructions
 			content = input + "\n\n" + lipgloss.NewStyle().
@@ -539,10 +749,8 @@ func (m model) viewTest() string {
 			Render("> " + m.testModel.specInput.View())
 
 		if m.testModel.err != nil {
-			// Show input error for spec file
-			content = input + "\n\n" + lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#FF6B6B")).
-				Render(fmt.Sprintf("Error: %s", m.testModel.err.Error()))
+			// Show enhanced input error for spec file with suggestions
+			content = input + "\n\n" + formatEnhancedError(m.testModel.err)
 		} else {
 			// Show spec file input instructions
 			content = input + "\n\n" + lipgloss.NewStyle().
@@ -557,10 +765,8 @@ func (m model) viewTest() string {
 			Render("> " + m.testModel.urlInput.View())
 
 		if m.testModel.err != nil {
-			// Show input error for base URL
-			content = input + "\n\n" + lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#FF6B6B")).
-				Render(fmt.Sprintf("Error: %s", m.testModel.err.Error()))
+			// Show enhanced input error for base URL with suggestions
+			content = input + "\n\n" + formatEnhancedError(m.testModel.err)
 		} else {
 			// Show base URL input instructions
 			content = input + "\n\n" + lipgloss.NewStyle().
@@ -578,11 +784,8 @@ func (m model) viewTest() string {
 			Render("Press Ctrl+C to cancel")
 	case 3: // Results display
 		if m.testModel.err != nil {
-			// Show testing error
-			content = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#FF6B6B")).
-				Bold(true).
-				Render(fmt.Sprintf("❌ Testing Failed:\n%s", m.testModel.err.Error()))
+			// Show enhanced testing error with actionable suggestions
+			content = formatEnhancedError(m.testModel.err)
 		} else {
 			// Populate table with test results
 			var rows []table.Row
@@ -698,19 +901,19 @@ func runTestCmd(specPath, baseURL string, auth *authConfig) tea.Cmd {
 }
 
 // validateSpec validates an OpenAPI specification file
-// Returns success message or detailed error
+// Returns success message or detailed error with actionable suggestions
 func validateSpec(filePath string) (string, error) {
 	// Load OpenAPI document with external references allowed
 	loader := &openapi3.Loader{IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(filePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to load spec: %v", err)
+		return "", enhanceFileError(err, filePath)
 	}
 
 	// Validate the loaded document
 	err = doc.Validate(loader.Context)
 	if err != nil {
-		return "", fmt.Errorf("validation failed: %v", err)
+		return "", enhanceValidationError(err)
 	}
 
 	return "OpenAPI spec is valid! 🎉", nil
@@ -888,7 +1091,7 @@ func runTests(specPath, baseURL string, auth *authConfig) ([]testResult, error) 
 	loader := &openapi3.Loader{IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(specPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load spec: %v", err)
+		return nil, enhanceFileError(err, specPath)
 	}
 
 	var results []testResult
@@ -1098,7 +1301,7 @@ func testEndpoint(method, url string, body []byte, auth *authConfig) (int, *http
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, enhanceNetworkError(err, url)
 	}
 
 	return resp.StatusCode, resp, nil
