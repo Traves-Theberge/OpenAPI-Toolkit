@@ -1,15 +1,15 @@
 # OpenAPI TUI - Development Progress
 
-## Phase 1: Critical Foundation (4 of 5 Complete) ✅
+## Phase 1: Critical Foundation (5 of 5 Complete) ✅✅✅
 
 ### ✅ Completed Features
 
 #### 1. Unit Tests & Coverage Baseline
 - **Status**: Complete
-- **Coverage**: 35.2% of statements (was 0% → 21.9% → 30.3% → 35.2%)
-- **Test Files**: `main_test.go` (756 lines)
-- **Test Functions**: 9 comprehensive test functions
-- **Test Cases**: 50+ test cases including edge cases
+- **Coverage**: 37.8% of statements (was 0% → 21.9% → 30.3% → 35.2% → 37.8%)
+- **Test Files**: `main_test.go` (1128 lines)
+- **Test Functions**: 11 comprehensive test functions
+- **Test Cases**: 70+ test cases including edge cases
 - **Achievements**:
   - Table-driven tests for all core functions
   - Integration tests for end-to-end workflows
@@ -68,16 +68,48 @@
 - **Test Coverage**: 7 test cases covering various scenarios
 - **Impact**: Tests now show "OK (validated)" for spec-compliant responses and report validation errors
 
-### 🔄 In Progress / Pending
-
 #### 6. Authentication Support
-- **Status**: Not started
-- **Priority**: High (Phase 1)
-- **Scope**: Bearer tokens, API keys, Basic auth
+- **Status**: Complete ✅
+- **Functions Implemented**:
+  - `applyAuth()` - Applies authentication to HTTP requests
+  - `authConfig` struct - Bearer, API Key, Basic auth support
+- **Features**:
+  - ✅ Bearer token authentication (Authorization: Bearer token)
+  - ✅ API Key in header (custom header name)
+  - ✅ API Key in query parameter (custom query param)
+  - ✅ Basic authentication (username/password)
+  - ✅ Graceful nil/none handling
+  - ✅ Signature updates across 12 call sites
+- **Test Coverage**: 11 test cases (7 unit + 4 integration)
+- **Impact**: Requests can now authenticate with protected APIs
 
 ## Code Quality Metrics
 
 ### Test Coverage
+```
+Phase Start:   0.0% (no tests)
+After Task #1: 21.9% (initial test suite)
+After Task #2: 30.3% (request body tests added)
+After Task #3: 35.2% (response validation tests added)
+After Task #5: 37.8% (authentication tests added)
+Target:        50%+ (stretch goal for Phase 2)
+```
+
+### Lines of Code
+```
+main.go:       1140 lines (was 804 → 848 → 1074 → 1140, +336 total for all Phase 1 features)
+main_test.go:  1128 lines (was 442 → 756 → 918 → 1128, +686 comprehensive tests)
+Total Test:    1128 lines
+Test Ratio:    0.99:1 (nearly perfect 1:1 test-to-code ratio!)
+```
+
+### Test Stats
+```
+Test Functions:  11 (including auth tests)
+Test Cases:      70+
+Auth Tests:      7 unit + 4 integration = 11 total
+All Tests:       PASSING ✅
+```
 ```
 Phase Start:   0.0% (no tests)
 After Task #1: 21.9% (initial test suite)

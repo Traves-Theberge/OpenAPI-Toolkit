@@ -405,8 +405,9 @@ classDiagram
 Key business logic functions with test coverage:
 
 ### Core Testing Functions
-- `runTests(specPath, baseURL)` - Main testing orchestrator
-- `testEndpoint(method, url, body)` - HTTP client with 10s timeout, returns status and response
+- `runTests(specPath, baseURL, auth)` - Main testing orchestrator with auth support
+- `testEndpoint(method, url, body, auth)` - HTTP client with 10s timeout and authentication
+- `applyAuth(req, auth)` - Apply authentication to HTTP requests
 - `replacePlaceholders(path)` - Replace `{id}` with `"1"` using regex
 - `buildQueryParams(operation)` - Generate query strings from spec
 - `generateRequestBody(operation)` - Create JSON from schema
@@ -418,10 +419,79 @@ Key business logic functions with test coverage:
 - `validateResponse(...)` - Response status code and content-type validation
 
 ### Test Coverage
-- **Current Coverage**: 35.2% of statements
-- **Test Files**: 10 test functions, 60+ test cases
+- **Current Coverage**: 37.8% of statements
+- **Test Files**: 11 test functions, 70+ test cases
 - **Test Types**: Unit tests, integration tests, table-driven tests
-- **Edge Cases**: Nil handling, invalid inputs, nested structures, response validation scenarios
+- **Edge Cases**: Nil handling, invalid inputs, nested structures, response validation, authentication scenarios
+
+## Authentication Support
+
+The application supports multiple authentication methods for protected APIs:
+
+```mermaid
+flowchart TD
+    A["applyAuth(req, auth)"] --> B{"auth is nil?"}
+    B -->|Yes| C["Return without modification"]
+    B -->|No| D{"authType?"}
+    D -->|"none" or ""| C
+    D -->|"bearer"| E["Set Authorization: Bearer token"]
+    D -->|"apiKey"| F{"apiKeyIn?"}
+    D -->|"basic"| G["Set Basic Auth header"]
+    F -->|"header"| H["Set custom header"]
+    F -->|"query"| I["Add query parameter"]
+    E --> J["Continue with request"]
+    H --> J
+    I --> J
+    G --> J
+```
+
+### Authentication Types
+
+1. **Bearer Token**
+   - Sets `Authorization: Bearer <token>` header
+   - Common for OAuth 2.0 and JWT authentication
+   - Example: `Authorization: Bearer eyJhbGciOiJIUzI1...`
+
+2. **API Key**
+   - Supports both header and query parameter placement
+   - Header: Sets custom header name (e.g., `X-API-Key: abc123`)
+   - Query: Adds to URL (e.g., `?api_key=abc123`)
+   - Flexible configuration for different API providers
+
+3. **Basic Authentication**
+   - Standard HTTP Basic Auth with username/password
+   - Uses Go's `SetBasicAuth()` for proper encoding
+   - Example: `Authorization: Basic dXNlcjpwYXNz`
+
+4. **None**
+   - Default for public/unauthenticated APIs
+   - No headers or parameters added
+
+### Implementation Details
+
+**authConfig Structure:**
+```go
+type authConfig struct {
+    authType   string // "bearer", "apiKey", "basic", "none"
+    token      string // For bearer and apiKey
+    apiKeyIn   string // "header" or "query"
+    apiKeyName string // Custom header/param name
+    username   string // For basic auth
+    password   string // For basic auth
+}
+```
+
+**Integration:**
+- `applyAuth()` is called in `testEndpoint()` before HTTP execution
+- All test functions accept optional `auth *authConfig` parameter
+- Nil auth defaults to no authentication
+- Function signatures updated across 12 call sites
+
+### Future Enhancements
+- UI for collecting authentication details
+- Support for OAuth 2.0 flows
+- Certificate-based authentication
+- Auth credential persistence
 
 ## Response Validation
 
@@ -474,12 +544,12 @@ flowchart TD
 
 ## Recent Enhancements
 
-### Phase 1 Implementation (4 of 5 Completed) ✅
+### Phase 1 Implementation (5 of 5 Complete) ✅✅✅
 
 1. **Unit Tests (#1)** ✅
    - Created comprehensive test suite
    - Table-driven tests for all core functions
-   - Coverage progression: 0% → 21.9% → 30.3% → 35.2%
+   - Coverage progression: 0% → 21.9% → 30.3% → 35.2% → 37.8%
 
 2. **Request Body Generation (#2)** ✅
    - Intelligent JSON generation from OpenAPI schemas
@@ -501,9 +571,24 @@ flowchart TD
    - Proper URL encoding with `?` and `&`
    - Integration with testing pipeline
 
-### Pending Features
+5. **Authentication Support (#5)** ✅
+   - Bearer token, API key, and Basic auth support
+   - Flexible header/query parameter placement for API keys
+   - 11 comprehensive auth tests (7 unit + 4 integration)
+   - Function signatures updated across entire codebase
+   - Ready for UI integration
 
-- **Authentication Support (#5)** - Bearer tokens, API keys, Basic auth (Phase 1 final feature)
-- **15 Additional Features** - See project roadmap for Phase 2-4
+### Phase 1 Complete! 🎉
+
+**Achievements:**
+- Test coverage: 0% → 37.8% (nearly 40%!)
+- Test-to-code ratio: 0.99:1 (1128 test lines for 1140 code lines)
+- All 5 critical foundation features delivered
+- 70+ test cases, all passing
+- Robust, production-ready testing infrastructure
+
+### Upcoming: Phase 2 - Developer Experience
+
+- **15 Additional Features** - See project roadmap for Phase 2-4 enhancements
 
 This architecture provides a robust, maintainable, and user-friendly TUI for OpenAPI testing. The recent enhancements enable realistic API testing with automatically generated request bodies, query parameters, and path parameter substitution. Future phases will add response validation, authentication, error reporting improvements, and advanced features like custom request editing and spec diffing.

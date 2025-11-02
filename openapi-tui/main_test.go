@@ -233,7 +233,7 @@ func TestTestEndpoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			url := server.URL + tt.path
-			status, resp, err := testEndpoint(tt.method, url, nil)
+			status, resp, err := testEndpoint(tt.method, url, nil, nil)
 
 			if tt.wantError && err == nil {
 				t.Error("Expected error but got none")
@@ -252,7 +252,7 @@ func TestTestEndpoint(t *testing.T) {
 
 	// Test unsupported method - now all methods are supported
 	t.Run("DELETE method", func(t *testing.T) {
-		_, resp, err := testEndpoint("DELETE", server.URL+"/success", nil)
+		_, resp, err := testEndpoint("DELETE", server.URL+"/success", nil, nil)
 		if err != nil {
 			t.Errorf("Expected no error but got: %v", err)
 		}
@@ -263,7 +263,7 @@ func TestTestEndpoint(t *testing.T) {
 
 	// Test invalid URL
 	t.Run("invalid URL", func(t *testing.T) {
-		_, resp, err := testEndpoint("GET", "://invalid-url", nil)
+		_, resp, err := testEndpoint("GET", "://invalid-url", nil, nil)
 		if err == nil {
 			t.Error("Expected error for invalid URL but got none")
 		}
@@ -274,7 +274,7 @@ func TestTestEndpoint(t *testing.T) {
 
 	// Test unreachable server
 	t.Run("unreachable server", func(t *testing.T) {
-		_, resp, err := testEndpoint("GET", "http://localhost:99999/test", nil)
+		_, resp, err := testEndpoint("GET", "http://localhost:99999/test", nil, nil)
 		if err == nil {
 			t.Error("Expected error for unreachable server but got none")
 		}
@@ -295,7 +295,7 @@ func TestTestEndpointTimeout(t *testing.T) {
 	defer server.Close()
 
 	// Test that we can make successful requests (timeout is working properly)
-	status, resp, err := testEndpoint("GET", server.URL+"/test", nil)
+	status, resp, err := testEndpoint("GET", server.URL+"/test", nil, nil)
 	if err != nil {
 		t.Errorf("Expected no error but got: %v", err)
 	}
@@ -363,7 +363,7 @@ paths:
 	}
 
 	// Run tests
-	results, err := runTests(specPath, server.URL)
+	results, err := runTests(specPath, server.URL, nil)
 	if err != nil {
 		t.Fatalf("runTests failed: %v", err)
 	}
@@ -387,7 +387,7 @@ paths:
 
 // TestRunTestsInvalidSpec tests error handling
 func TestRunTestsInvalidSpec(t *testing.T) {
-	_, err := runTests("/nonexistent/spec.yaml", "http://example.com")
+	_, err := runTests("/nonexistent/spec.yaml", "http://example.com", nil)
 	if err == nil {
 		t.Error("Expected error for invalid spec but got none")
 	}
@@ -434,7 +434,7 @@ paths:
 	}
 
 	// Run tests
-	results, err := runTests(specPath, server.URL)
+	results, err := runTests(specPath, server.URL, nil)
 	if err != nil {
 		t.Fatalf("runTests failed: %v", err)
 	}
@@ -922,4 +922,233 @@ func TestValidateResponse(t *testing.T) {
 // Helper function for creating string pointers
 func strPtr(s string) *string {
 	return &s
+}
+
+// TestApplyAuth tests authentication application to HTTP requests
+func TestApplyAuth(t *testing.T) {
+	tests := []struct {
+		name          string
+		auth          *authConfig
+		validateReq   func(t *testing.T, req *http.Request)
+	}{
+		{
+			name: "nil auth",
+			auth: nil,
+			validateReq: func(t *testing.T, req *http.Request) {
+				if req.Header.Get("Authorization") != "" {
+					t.Error("Expected no Authorization header")
+				}
+			},
+		},
+		{
+			name: "none auth type",
+			auth: &authConfig{authType: "none"},
+			validateReq: func(t *testing.T, req *http.Request) {
+				if req.Header.Get("Authorization") != "" {
+					t.Error("Expected no Authorization header")
+				}
+			},
+		},
+		{
+			name: "bearer token",
+			auth: &authConfig{
+				authType: "bearer",
+				token:    "test-token-123",
+			},
+			validateReq: func(t *testing.T, req *http.Request) {
+				auth := req.Header.Get("Authorization")
+				expected := "Bearer test-token-123"
+				if auth != expected {
+					t.Errorf("Expected Authorization %q but got %q", expected, auth)
+				}
+			},
+		},
+		{
+			name: "API key in header",
+			auth: &authConfig{
+				authType:   "apiKey",
+				token:      "secret-key",
+				apiKeyIn:   "header",
+				apiKeyName: "X-API-Key",
+			},
+			validateReq: func(t *testing.T, req *http.Request) {
+				key := req.Header.Get("X-API-Key")
+				if key != "secret-key" {
+					t.Errorf("Expected X-API-Key %q but got %q", "secret-key", key)
+				}
+			},
+		},
+		{
+			name: "API key in query",
+			auth: &authConfig{
+				authType:   "apiKey",
+				token:      "query-key",
+				apiKeyIn:   "query",
+				apiKeyName: "api_key",
+			},
+			validateReq: func(t *testing.T, req *http.Request) {
+				key := req.URL.Query().Get("api_key")
+				if key != "query-key" {
+					t.Errorf("Expected api_key %q but got %q", "query-key", key)
+				}
+			},
+		},
+		{
+			name: "basic auth",
+			auth: &authConfig{
+				authType: "basic",
+				username: "user",
+				password: "pass",
+			},
+			validateReq: func(t *testing.T, req *http.Request) {
+				username, password, ok := req.BasicAuth()
+				if !ok {
+					t.Error("Expected basic auth to be set")
+					return
+				}
+				if username != "user" {
+					t.Errorf("Expected username %q but got %q", "user", username)
+				}
+				if password != "pass" {
+					t.Errorf("Expected password %q but got %q", "pass", password)
+				}
+			},
+		},
+		{
+			name: "bearer with empty token",
+			auth: &authConfig{
+				authType: "bearer",
+				token:    "",
+			},
+			validateReq: func(t *testing.T, req *http.Request) {
+				if req.Header.Get("Authorization") != "" {
+					t.Error("Expected no Authorization header for empty token")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "http://example.com/test", nil)
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+
+			applyAuth(req, tt.auth)
+			tt.validateReq(t, req)
+		})
+	}
+}
+
+// TestAuthIntegration tests authentication integration with testEndpoint
+func TestAuthIntegration(t *testing.T) {
+	// Track received headers
+	var receivedHeaders http.Header
+	var receivedQuery string
+	var receivedUsername, receivedPassword string
+	var receivedBasicAuth bool
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedHeaders = r.Header.Clone()
+		receivedQuery = r.URL.RawQuery
+		receivedUsername, receivedPassword, receivedBasicAuth = r.BasicAuth()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	tests := []struct {
+		name       string
+		auth       *authConfig
+		checkAuth  func(t *testing.T)
+	}{
+		{
+			name: "bearer token sent",
+			auth: &authConfig{
+				authType: "bearer",
+				token:    "test-bearer-token",
+			},
+			checkAuth: func(t *testing.T) {
+				auth := receivedHeaders.Get("Authorization")
+				if auth != "Bearer test-bearer-token" {
+					t.Errorf("Expected Bearer token but got %q", auth)
+				}
+			},
+		},
+		{
+			name: "API key in header sent",
+			auth: &authConfig{
+				authType:   "apiKey",
+				token:      "header-key-value",
+				apiKeyIn:   "header",
+				apiKeyName: "X-Custom-Key",
+			},
+			checkAuth: func(t *testing.T) {
+				key := receivedHeaders.Get("X-Custom-Key")
+				if key != "header-key-value" {
+					t.Errorf("Expected header key but got %q", key)
+				}
+			},
+		},
+		{
+			name: "API key in query sent",
+			auth: &authConfig{
+				authType:   "apiKey",
+				token:      "query-value",
+				apiKeyIn:   "query",
+				apiKeyName: "key",
+			},
+			checkAuth: func(t *testing.T) {
+				if !strings.Contains(receivedQuery, "key=query-value") {
+					t.Errorf("Expected query param key=query-value but got query: %q", receivedQuery)
+				}
+			},
+		},
+		{
+			name: "basic auth sent",
+			auth: &authConfig{
+				authType: "basic",
+				username: "testuser",
+				password: "testpass",
+			},
+			checkAuth: func(t *testing.T) {
+				if !receivedBasicAuth {
+					t.Error("Expected basic auth to be received")
+					return
+				}
+				if receivedUsername != "testuser" {
+					t.Errorf("Expected username testuser but got %q", receivedUsername)
+				}
+				if receivedPassword != "testpass" {
+					t.Errorf("Expected password testpass but got %q", receivedPassword)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset tracking variables
+			receivedHeaders = nil
+			receivedQuery = ""
+			receivedUsername = ""
+			receivedPassword = ""
+			receivedBasicAuth = false
+
+			// Make request
+			status, resp, err := testEndpoint("GET", server.URL+"/test", nil, tt.auth)
+			if err != nil {
+				t.Fatalf("testEndpoint failed: %v", err)
+			}
+			if resp != nil && resp.Body != nil {
+				resp.Body.Close()
+			}
+			if status != 200 {
+				t.Errorf("Expected status 200 but got %d", status)
+			}
+
+			// Verify auth was sent correctly
+			tt.checkAuth(t)
+		})
+	}
 }

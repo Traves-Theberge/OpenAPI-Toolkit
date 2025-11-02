@@ -87,6 +87,16 @@ type validationResult struct {
 	expectedStatus string   // Expected status code(s)
 }
 
+// authConfig contains authentication configuration for API requests
+type authConfig struct {
+	authType string // Type: "bearer", "apiKey", "basic", "none"
+	token    string // For bearer tokens or API keys
+	apiKeyIn string // For API keys: "header" or "query"
+	apiKeyName string // Header/query parameter name for API key
+	username string // For basic auth
+	password string // For basic auth
+}
+
 // model is the main application state, containing all sub-models and UI state
 type model struct {
 	cursor       int           // Currently selected menu item (0-3)
@@ -279,7 +289,8 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.testModel.step = 2
 				m.testModel.testing = true
 				// Start async testing command
-				return m, runTestCmd(m.testModel.specInput.Value(), m.testModel.urlInput.Value())
+				// TODO: Collect auth configuration from user in future enhancement
+				return m, runTestCmd(m.testModel.specInput.Value(), m.testModel.urlInput.Value(), nil)
 			case tea.KeyCtrlC, tea.KeyEsc:
 				// Return to menu and reset test state
 				m.screen = menuScreen
@@ -679,9 +690,9 @@ func initialTestModel() testModel {
 
 // runTestCmd creates a Bubble Tea command to run tests asynchronously
 // Returns a command that executes runTests in a goroutine and sends results via message
-func runTestCmd(specPath, baseURL string) tea.Cmd {
+func runTestCmd(specPath, baseURL string, auth *authConfig) tea.Cmd {
 	return func() tea.Msg {
-		results, err := runTests(specPath, baseURL)
+		results, err := runTests(specPath, baseURL, auth)
 		return testResultMsg{results: results, err: err}
 	}
 }
@@ -871,7 +882,8 @@ func generateSampleFromSchema(schema *openapi3.Schema) interface{} {
 
 // runTests executes API tests against endpoints defined in OpenAPI spec
 // Tests each endpoint with a simple request and records results
-func runTests(specPath, baseURL string) ([]testResult, error) {
+// Accepts optional auth configuration for authenticated requests
+func runTests(specPath, baseURL string, auth *authConfig) ([]testResult, error) {
 	// Load and validate the OpenAPI spec
 	loader := &openapi3.Loader{IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(specPath)
@@ -910,7 +922,7 @@ func runTests(specPath, baseURL string) ([]testResult, error) {
 				}
 
 				// Test the endpoint and record result
-				status, resp, err := testEndpoint(method, endpoint, requestBody)
+				status, resp, err := testEndpoint(method, endpoint, requestBody, auth)
 				message := "OK"
 				if err != nil {
 					message = err.Error()
@@ -1023,10 +1035,39 @@ func validateResponse(resp *http.Response, operation *openapi3.Operation, status
 	return result
 }
 
+// applyAuth applies authentication configuration to an HTTP request
+func applyAuth(req *http.Request, auth *authConfig) {
+	if auth == nil || auth.authType == "none" || auth.authType == "" {
+		return
+	}
+
+	switch auth.authType {
+	case "bearer":
+		if auth.token != "" {
+			req.Header.Set("Authorization", "Bearer "+auth.token)
+		}
+	case "apiKey":
+		if auth.apiKeyName != "" && auth.token != "" {
+			if auth.apiKeyIn == "header" {
+				req.Header.Set(auth.apiKeyName, auth.token)
+			} else if auth.apiKeyIn == "query" {
+				// Add to query parameters
+				q := req.URL.Query()
+				q.Add(auth.apiKeyName, auth.token)
+				req.URL.RawQuery = q.Encode()
+			}
+		}
+	case "basic":
+		if auth.username != "" {
+			req.SetBasicAuth(auth.username, auth.password)
+		}
+	}
+}
+
 // testEndpoint performs an HTTP request to test an API endpoint
 // Supports GET, POST, PUT, PATCH, DELETE methods with optional request bodies
 // Returns status code, response object, and error
-func testEndpoint(method, url string, body []byte) (int, *http.Response, error) {
+func testEndpoint(method, url string, body []byte, auth *authConfig) (int, *http.Response, error) {
 	var req *http.Request
 	var err error
 
@@ -1047,6 +1088,9 @@ func testEndpoint(method, url string, body []byte) (int, *http.Response, error) 
 			return 0, nil, err
 		}
 	}
+
+	// Apply authentication if configured
+	applyAuth(req, auth)
 
 	// Execute request with timeout to prevent hanging
 	client := &http.Client{
