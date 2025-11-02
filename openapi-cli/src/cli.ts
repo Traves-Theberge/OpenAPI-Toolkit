@@ -30,9 +30,11 @@ program
   .description('Run API tests against an OpenAPI spec')
   .argument('<spec>', 'Path to the OpenAPI spec file')
   .argument('<baseUrl>', 'Base URL of the API to test')
-  .action(async (spec: string, baseUrl: string) => {
+  .option('-e, --export <file>', 'Export results to JSON file')
+  .option('-v, --verbose', 'Show verbose output with request/response details')
+  .action(async (spec: string, baseUrl: string, options: { export?: string; verbose?: boolean }) => {
     try {
-      await runTests(spec, baseUrl);
+      await runTests(spec, baseUrl, options);
       console.log('All tests passed.');
     } catch (error) {
       console.error('Tests failed:', error instanceof Error ? error.message : String(error));

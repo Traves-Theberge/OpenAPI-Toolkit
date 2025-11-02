@@ -31,8 +31,11 @@ npm link
 # Validate a spec
 openapi-test validate spec.yaml
 
-# Test an API
+# Test an API (basic)
 openapi-test test spec.yaml https://api.example.com
+
+# Test with verbose output and JSON export
+openapi-test test spec.yaml https://api.example.com -v -e results.json
 ```
 
 ### TUI - For Interactive Development
@@ -57,9 +60,9 @@ go build
 | **Output** | Colored text | Styled tables | TUI: More visual |
 | **Summary Stats** | Yes | **Yes ✅** | **TUI: Pass rates + timing** |
 | **Authentication** | No | Yes (Bearer/API Key/Basic) | TUI: Fully implemented |
-| **Error Messages** | Basic | Enhanced with suggestions | TUI: More helpful |
-| **Verbose Logging** | No | Yes (toggle with 'v') | TUI: Full HTTP details |
-| **Export Formats** | No | **JSON/HTML/JUnit XML ✅** | **TUI: CI/CD ready** |
+| **Error Messages** | **Enhanced with suggestions ✅** | Enhanced with suggestions | Both equal |
+| **Verbose Logging** | **Yes (--verbose flag) ✅** | Yes (toggle with 'v') | Both equal |
+| **Export Formats** | **JSON ✅** | **JSON/HTML/JUnit XML ✅** | **TUI: More formats** |
 | **Response Filtering** | No | **Yes (status/method/keyword) ✅** | **TUI: Interactive** |
 | **Test History** | No | **Yes (50 runs) ✅** | **TUI: Replay tests** |
 | **Configuration** | No | **Persistent YAML ✅** | **TUI: Auto-save** |

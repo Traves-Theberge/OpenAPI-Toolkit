@@ -28,9 +28,11 @@ program
     .description('Run API tests against an OpenAPI spec')
     .argument('<spec>', 'Path to the OpenAPI spec file')
     .argument('<baseUrl>', 'Base URL of the API to test')
-    .action(async (spec, baseUrl) => {
+    .option('-e, --export <file>', 'Export results to JSON file')
+    .option('-v, --verbose', 'Show verbose output with request/response details')
+    .action(async (spec, baseUrl, options) => {
     try {
-        await (0, test_1.runTests)(spec, baseUrl);
+        await (0, test_1.runTests)(spec, baseUrl, options);
         console.log('All tests passed.');
     }
     catch (error) {

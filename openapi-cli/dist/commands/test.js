@@ -41,7 +41,7 @@ const axios_1 = __importDefault(require("axios"));
 const fs = __importStar(require("fs"));
 const yaml = __importStar(require("js-yaml"));
 const path = __importStar(require("path"));
-async function runTests(specPath, baseUrl) {
+async function runTests(specPath, baseUrl, options = {}) {
     // Load and parse spec
     const spec = loadSpec(specPath);
     console.log(`\n🧪 Testing API: ${spec.info.title}`);
@@ -53,11 +53,17 @@ async function runTests(specPath, baseUrl) {
     for (const [pathStr, methods] of Object.entries(spec.paths)) {
         for (const [method, operation] of Object.entries(methods)) {
             if (typeof operation === 'object' && operation !== null) {
-                const result = await testEndpoint(baseUrl, pathStr, method.toUpperCase(), operation);
+                const result = await testEndpoint(baseUrl, pathStr, method.toUpperCase(), operation, options.verbose);
                 results.push(result);
                 if (result.success) {
                     successCount++;
                     console.log(`\x1b[32m✓\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.status} ${result.message}`);
+                    if (options.verbose && result.duration) {
+                        console.log(`  \x1b[90mDuration: ${result.duration}ms\x1b[0m`);
+                        if (result.responseHeaders) {
+                            console.log(`  \x1b[90mResponse Headers: ${JSON.stringify(result.responseHeaders)}\x1b[0m`);
+                        }
+                    }
                 }
                 else {
                     failureCount++;
@@ -69,6 +75,35 @@ async function runTests(specPath, baseUrl) {
     // Summary
     console.log(`\n${'='.repeat(80)}`);
     console.log(`📊 Summary: ${successCount} passed, ${failureCount} failed, ${results.length} total`);
+    // Export results if requested
+    if (options.export) {
+        try {
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                specPath,
+                baseUrl,
+                totalTests: results.length,
+                passed: successCount,
+                failed: failureCount,
+                results: results.map(r => ({
+                    method: r.method,
+                    endpoint: r.endpoint,
+                    status: r.status,
+                    success: r.success,
+                    message: r.message,
+                    duration: r.duration,
+                    timestamp: r.timestamp,
+                    requestHeaders: r.requestHeaders,
+                    responseHeaders: r.responseHeaders,
+                })),
+            };
+            fs.writeFileSync(options.export, JSON.stringify(exportData, null, 2), 'utf-8');
+            console.log(`\x1b[32m✓ Results exported to ${options.export}\x1b[0m`);
+        }
+        catch (error) {
+            console.error(`\x1b[31m✗ Failed to export results: ${error instanceof Error ? error.message : String(error)}\x1b[0m`);
+        }
+    }
     if (failureCount > 0) {
         console.log(`\x1b[31m✗ Some tests failed\x1b[0m\n`);
         process.exit(1);
@@ -125,7 +160,7 @@ function buildQueryParams(operation) {
     });
     return queryParams.length > 0 ? '?' + queryParams.join('&') : '';
 }
-async function testEndpoint(baseUrl, pathStr, method, operation) {
+async function testEndpoint(baseUrl, pathStr, method, operation, verbose = false) {
     // Replace path placeholders like {id} with actual values
     const processedPath = replacePlaceholders(pathStr);
     // Build query parameters
@@ -133,6 +168,7 @@ async function testEndpoint(baseUrl, pathStr, method, operation) {
     const url = `${baseUrl}${processedPath}${queryString}`;
     try {
         let response;
+        const startTime = Date.now();
         const config = {
             timeout: 10000, // 10 second timeout
             validateStatus: () => true, // Don't throw on any status code
@@ -172,14 +208,26 @@ async function testEndpoint(baseUrl, pathStr, method, operation) {
                     message: `Unsupported HTTP method`,
                 };
         }
+        const duration = Date.now() - startTime;
         const success = response.status >= 200 && response.status < 300;
-        return {
+        const result = {
             method,
             endpoint: processedPath,
             status: response.status,
             success,
             message: success ? 'OK' : `HTTP ${response.status} ${response.statusText}`,
+            duration,
+            timestamp: new Date().toISOString(),
         };
+        // Add headers if verbose mode is enabled
+        if (verbose) {
+            result.requestHeaders = {
+                'User-Agent': 'openapi-cli',
+                'Accept': 'application/json',
+            };
+            result.responseHeaders = response.headers;
+        }
+        return result;
     }
     catch (error) {
         const err = error;

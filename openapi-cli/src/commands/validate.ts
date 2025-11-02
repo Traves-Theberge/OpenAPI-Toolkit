@@ -5,13 +5,15 @@ import * as yaml from 'js-yaml';
 interface ValidationError {
   path: string;
   message: string;
+  suggestion?: string;
 }
 
 export async function validateSpec(filePath: string): Promise<void> {
   console.log(`\n📄 Validating OpenAPI specification: ${filePath}`);
 
   if (!fs.existsSync(filePath)) {
-    console.log(`\x1b[31m✗ File not found: ${filePath}\x1b[0m\n`);
+    console.log(`\x1b[31m✗ File not found: ${filePath}\x1b[0m`);
+    console.log(`\x1b[33m💡 Suggestion: Check the file path and ensure the file exists\x1b[0m\n`);
     throw new Error(`File not found: ${filePath}`);
   }
 
@@ -41,11 +43,13 @@ export async function validateSpec(filePath: string): Promise<void> {
     errors.push({
       path: 'openapi',
       message: 'Missing required field "openapi"',
+      suggestion: 'Add: openapi: "3.0.0" or openapi: "3.1.0" at the root level',
     });
   } else if (typeof spec.openapi !== 'string' || !spec.openapi.startsWith('3.')) {
     errors.push({
       path: 'openapi',
       message: `Unsupported OpenAPI version: ${spec.openapi}. Only OpenAPI 3.x is supported`,
+      suggestion: 'Update to: openapi: "3.0.0" or openapi: "3.1.0"',
     });
   }
 
@@ -54,18 +58,21 @@ export async function validateSpec(filePath: string): Promise<void> {
     errors.push({
       path: 'info',
       message: 'Missing required "info" object',
+      suggestion: 'Add: info: { title: "My API", version: "1.0.0" }',
     });
   } else {
     if (!spec.info.title) {
       errors.push({
         path: 'info.title',
         message: 'Missing required field "info.title"',
+        suggestion: 'Add: title: "My API Name" under the info object',
       });
     }
     if (!spec.info.version) {
       errors.push({
         path: 'info.version',
         message: 'Missing required field "info.version"',
+        suggestion: 'Add: version: "1.0.0" under the info object',
       });
     }
   }
@@ -145,6 +152,9 @@ export async function validateSpec(filePath: string): Promise<void> {
     console.log(`\n\x1b[31m✗ Validation failed with ${errors.length} error(s):\x1b[0m\n`);
     errors.forEach((err, idx) => {
       console.log(`  ${idx + 1}. \x1b[33m${err.path}\x1b[0m: ${err.message}`);
+      if (err.suggestion) {
+        console.log(`     \x1b[36m💡 ${err.suggestion}\x1b[0m`);
+      }
     });
     console.log('');
     throw new Error('Validation failed');

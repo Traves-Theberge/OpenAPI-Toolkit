@@ -13,6 +13,9 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **JSON & YAML Support** - Parse and validate both `.json` and `.yaml`/`.yml` files
 - **Detailed Error Messages** - Connection errors, timeouts, and HTTP status codes clearly reported
 - **Summary Statistics** - Test results summary with pass/fail counts
+- **JSON Export** - Export test results to JSON file for CI/CD integration
+- **Verbose Mode** - Show detailed request/response headers and timing info
+- **Enhanced Error Messages** - Actionable suggestions for fixing validation errors
 
 ## Installation
 
@@ -58,7 +61,17 @@ openapi-test validate path/to/spec.yaml
 Tests all endpoints defined in the OpenAPI spec against a live API:
 
 ```bash
+# Basic testing
 openapi-test test path/to/spec.yaml http://api.example.com
+
+# Verbose mode (show request/response details)
+openapi-test test path/to/spec.yaml http://api.example.com --verbose
+
+# Export results to JSON
+openapi-test test path/to/spec.yaml http://api.example.com --export results.json
+
+# Combine flags
+openapi-test test path/to/spec.yaml http://api.example.com -v -e results.json
 ```
 
 **Output Example:**
@@ -67,12 +80,16 @@ openapi-test test path/to/spec.yaml http://api.example.com
 📍 Base URL: https://jsonplaceholder.typicode.com
 
 ✓ GET     /posts                                   - 200 OK
+  Duration: 156ms
+  Response Headers: {"content-type":"application/json; charset=utf-8"}
 ✓ POST    /posts                                   - 201 OK
+  Duration: 142ms
 ✓ GET     /posts/1                                 - 200 OK
 ✗ DELETE  /posts/999                               - HTTP 404 Not Found
 
 ================================================================================
 📊 Summary: 3 passed, 1 failed, 4 total
+✓ Results exported to results.json
 ✗ Some tests failed
 ```
 
@@ -115,6 +132,73 @@ The test suite includes:
 - Mock filesystem tests
 
 ## Advanced Features
+
+### Verbose Mode
+
+Show detailed request/response information including headers and timing:
+
+```bash
+openapi-test test spec.yaml http://api.example.com --verbose
+# or short form:
+openapi-test test spec.yaml http://api.example.com -v
+```
+
+**Output includes:**
+- Request duration in milliseconds
+- Response headers
+- Detailed timing for each endpoint test
+
+### JSON Export
+
+Export test results to a JSON file for integration with CI/CD pipelines:
+
+```bash
+openapi-test test spec.yaml http://api.example.com --export results.json
+# or short form:
+openapi-test test spec.yaml http://api.example.com -e results.json
+```
+
+**JSON Export Format:**
+```json
+{
+  "timestamp": "2025-01-15T10:30:00.000Z",
+  "specPath": "spec.yaml",
+  "baseUrl": "http://api.example.com",
+  "totalTests": 10,
+  "passed": 8,
+  "failed": 2,
+  "results": [
+    {
+      "method": "GET",
+      "endpoint": "/users",
+      "status": 200,
+      "success": true,
+      "message": "OK",
+      "duration": 156,
+      "timestamp": "2025-01-15T10:30:00.123Z"
+    }
+  ]
+}
+```
+
+### Enhanced Error Messages
+
+Validation errors now include actionable suggestions:
+
+```bash
+openapi-test validate invalid-spec.yaml
+```
+
+**Output:**
+```
+✗ Validation failed with 2 error(s):
+
+  1. openapi: Missing required field "openapi"
+     💡 Add: openapi: "3.0.0" or openapi: "3.1.0" at the root level
+
+  2. info.version: Missing required field "info.version"
+     💡 Add: version: "1.0.0" under the info object
+```
 
 ### Path Parameter Replacement
 

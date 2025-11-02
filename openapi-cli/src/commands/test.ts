@@ -15,9 +15,18 @@ interface TestResult {
   status: number | null;
   success: boolean;
   message: string;
+  duration?: number;
+  timestamp?: string;
+  requestHeaders?: Record<string, string>;
+  responseHeaders?: Record<string, string>;
 }
 
-export async function runTests(specPath: string, baseUrl: string): Promise<void> {
+interface TestOptions {
+  export?: string;
+  verbose?: boolean;
+}
+
+export async function runTests(specPath: string, baseUrl: string, options: TestOptions = {}): Promise<void> {
   // Load and parse spec
   const spec: OpenAPISpec = loadSpec(specPath);
 
@@ -32,12 +41,18 @@ export async function runTests(specPath: string, baseUrl: string): Promise<void>
   for (const [pathStr, methods] of Object.entries(spec.paths)) {
     for (const [method, operation] of Object.entries(methods)) {
       if (typeof operation === 'object' && operation !== null) {
-        const result = await testEndpoint(baseUrl, pathStr, method.toUpperCase(), operation);
+        const result = await testEndpoint(baseUrl, pathStr, method.toUpperCase(), operation, options.verbose);
         results.push(result);
 
         if (result.success) {
           successCount++;
           console.log(`\x1b[32m✓\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.status} ${result.message}`);
+          if (options.verbose && result.duration) {
+            console.log(`  \x1b[90mDuration: ${result.duration}ms\x1b[0m`);
+            if (result.responseHeaders) {
+              console.log(`  \x1b[90mResponse Headers: ${JSON.stringify(result.responseHeaders)}\x1b[0m`);
+            }
+          }
         } else {
           failureCount++;
           console.log(`\x1b[31m✗\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.message}`);
@@ -49,6 +64,36 @@ export async function runTests(specPath: string, baseUrl: string): Promise<void>
   // Summary
   console.log(`\n${'='.repeat(80)}`);
   console.log(`📊 Summary: ${successCount} passed, ${failureCount} failed, ${results.length} total`);
+
+  // Export results if requested
+  if (options.export) {
+    try {
+      const exportData = {
+        timestamp: new Date().toISOString(),
+        specPath,
+        baseUrl,
+        totalTests: results.length,
+        passed: successCount,
+        failed: failureCount,
+        results: results.map(r => ({
+          method: r.method,
+          endpoint: r.endpoint,
+          status: r.status,
+          success: r.success,
+          message: r.message,
+          duration: r.duration,
+          timestamp: r.timestamp,
+          requestHeaders: r.requestHeaders,
+          responseHeaders: r.responseHeaders,
+        })),
+      };
+
+      fs.writeFileSync(options.export, JSON.stringify(exportData, null, 2), 'utf-8');
+      console.log(`\x1b[32m✓ Results exported to ${options.export}\x1b[0m`);
+    } catch (error) {
+      console.error(`\x1b[31m✗ Failed to export results: ${error instanceof Error ? error.message : String(error)}\x1b[0m`);
+    }
+  }
 
   if (failureCount > 0) {
     console.log(`\x1b[31m✗ Some tests failed\x1b[0m\n`);
@@ -113,7 +158,8 @@ async function testEndpoint(
   baseUrl: string,
   pathStr: string,
   method: string,
-  operation: any
+  operation: any,
+  verbose: boolean = false
 ): Promise<TestResult> {
   // Replace path placeholders like {id} with actual values
   const processedPath = replacePlaceholders(pathStr);
@@ -125,6 +171,7 @@ async function testEndpoint(
 
   try {
     let response: AxiosResponse;
+    const startTime = Date.now();
     const config = {
       timeout: 10000, // 10 second timeout
       validateStatus: () => true, // Don't throw on any status code
@@ -166,15 +213,29 @@ async function testEndpoint(
         };
     }
 
+    const duration = Date.now() - startTime;
     const success = response.status >= 200 && response.status < 300;
 
-    return {
+    const result: TestResult = {
       method,
       endpoint: processedPath,
       status: response.status,
       success,
       message: success ? 'OK' : `HTTP ${response.status} ${response.statusText}`,
+      duration,
+      timestamp: new Date().toISOString(),
     };
+
+    // Add headers if verbose mode is enabled
+    if (verbose) {
+      result.requestHeaders = {
+        'User-Agent': 'openapi-cli',
+        'Accept': 'application/json',
+      };
+      result.responseHeaders = response.headers as Record<string, string>;
+    }
+
+    return result;
   } catch (error) {
     const err = error as any;
     let message = 'Unknown error';
