@@ -1,0 +1,21 @@
+# Binaries
+openapi-tui/openapi-tui
+openapi-tui/openapi-cli-tui
+openapi-cli/dist/
+openapi-cli/node_modules/
+
+# Test artifacts
+*.test
+*.out
+coverage.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
