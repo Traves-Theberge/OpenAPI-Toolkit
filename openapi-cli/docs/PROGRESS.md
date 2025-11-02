@@ -181,7 +181,7 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 ---
 
-## Phase 3: Advanced Features (7 of 15 Complete) 🎯
+## Phase 3: Advanced Features (8 of 15 Complete) 🎯
 
 ### ✅ Completed Features (Phase 3)
 
@@ -286,20 +286,30 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 - **Testing**: Tested concurrency 1,5,10,20 | Combined with verbose, quiet, export, filters | Unit tests pass
 - **Documentation**: Comprehensive README section with performance metrics and examples
 
+#### 8. Request Body Generation from Schema
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - Automatic generation from JSON Schema definitions
+  - Falls back to examples if provided (backward compatible)
+  - Supports all JSON Schema types (string, number, integer, boolean, object, array, null)
+  - Honors constraints: min/max length, min/max values, enums, required fields
+  - Special format support: email, uri, date, date-time, uuid
+  - Handles schema composition: oneOf, anyOf, allOf
+  - Required fields always generated, optional fields 50% probability
+- **Files**: `src/commands/test.ts` (lines 254-409, 514-535)
+- **Type-aware generation**: String formats, numeric ranges, enum first values, nested objects/arrays
+- **Use Cases**: Testing specs without examples, rapid API testing, schema validation, CI/CD automation
+- **Testing**: Tested with simple types, nested objects, arrays, enums, formats | Backward compatibility verified
+- **Documentation**: Comprehensive README section with schema feature reference and examples
+
 ---
 
-### 🚀 Planned Features (8 remaining)
+### 🚀 Planned Features (7 remaining)
 
 #### High Priority
 
-1. **Request Body Generation from Schema** ⭐⭐⭐
-   - Generate bodies from schema (not just examples)
-   - Type-aware value generation
-   - Required field detection
-   - **Complexity**: High
-   - **Impact**: High
-
-4. **HTML Export Format** ⭐⭐
+1. **HTML Export Format** ⭐⭐
    - `--export-html <file>` flag
    - Styled, readable HTML reports
    - Embedded CSS

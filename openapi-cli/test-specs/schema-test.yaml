@@ -1,0 +1,123 @@
+openapi: 3.0.0
+info:
+  title: Schema Generation Test API
+  version: 1.0.0
+  description: Test API for schema-based body generation
+
+servers:
+  - url: https://jsonplaceholder.typicode.com
+
+paths:
+  /posts:
+    post:
+      summary: Create a post with schema
+      operationId: createPostWithSchema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - body
+                - userId
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                body:
+                  type: string
+                  minLength: 10
+                userId:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Post created
+
+  /users:
+    post:
+      summary: Create user with complex schema
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                age:
+                  type: integer
+                  minimum: 18
+                  maximum: 100
+                active:
+                  type: boolean
+                role:
+                  type: string
+                  enum:
+                    - admin
+                    - user
+                    - guest
+                address:
+                  type: object
+                  properties:
+                    street:
+                      type: string
+                    city:
+                      type: string
+                    zipCode:
+                      type: string
+                      minLength: 5
+                      maxLength: 5
+      responses:
+        '201':
+          description: User created
+
+  /comments:
+    post:
+      summary: Create comment with defaults
+      operationId: createComment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - postId
+                - name
+                - email
+                - body
+              properties:
+                postId:
+                  type: integer
+                  default: 1
+                name:
+                  type: string
+                  default: Test User
+                email:
+                  type: string
+                  format: email
+                body:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Comment created

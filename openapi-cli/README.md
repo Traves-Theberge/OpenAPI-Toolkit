@@ -23,6 +23,7 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **Path Filtering** - Test only paths matching a pattern with * wildcard (--paths /users/*)
 - **Quiet Mode** - Suppress output except errors and exit codes for CI/CD (--quiet)
 - **Parallel Execution** - Run tests concurrently with configurable concurrency limit (--parallel 5)
+- **Schema-Based Body Generation** - Automatically generate request bodies from JSON Schema definitions
 
 ## Installation
 
@@ -588,6 +589,114 @@ openapi-test test spec.yaml https://internal.api.com \
 - All tests complete before summary is shown
 - Exit codes work the same as sequential mode
 - Export includes all results regardless of execution order
+
+### Schema-Based Request Body Generation
+
+Automatically generate request bodies from JSON Schema definitions when examples are not provided:
+
+**How It Works:**
+- If an `example` is provided in the spec, it's used (backward compatible)
+- If no example exists, the CLI generates a body from the `schema` definition
+- Supports all JSON Schema types: string, number, integer, boolean, object, array, null
+- Honors schema constraints: min/max length, min/max values, enums, required fields
+- Handles special string formats: email, uri, date, date-time, uuid
+
+**Supported Schema Features:**
+```yaml
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - name
+          - email
+        properties:
+          name:
+            type: string
+            minLength: 3
+            maxLength: 50
+          email:
+            type: string
+            format: email        # → test@example.com
+          age:
+            type: integer
+            minimum: 18
+            maximum: 100         # → 59 (midpoint)
+          active:
+            type: boolean        # → true
+          role:
+            type: string
+            enum: [admin, user]  # → admin (first value)
+          tags:
+            type: array
+            items:
+              type: string       # → ["testx", "testx"]
+          address:
+            type: object
+            properties:
+              city:
+                type: string     # → "testx"
+```
+
+**Generated Values:**
+- **String**: `"testx"` (respects minLength/maxLength)
+- **Email**: `test@example.com`
+- **URI/URL**: `https://example.com`
+- **Date**: `2025-01-01`
+- **DateTime**: `2025-01-01T00:00:00Z`
+- **UUID**: `123e4567-e89b-12d3-a456-426614174000`
+- **Number/Integer**: Midpoint between min and max (default: 50)
+- **Boolean**: `true`
+- **Enum**: First value in the enum array
+- **Array**: 2 generated items
+- **Object**: All required fields + 50% of optional fields
+
+**Example Spec:**
+```yaml
+paths:
+  /users:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                age:
+                  type: integer
+                  minimum: 18
+```
+
+**Generated Body:**
+```json
+{
+  "name": "testx",
+  "email": "test@example.com",
+  "age": 59
+}
+```
+
+**Use Cases:**
+- **Specs without examples**: Test APIs that only define schemas
+- **Rapid testing**: No need to manually craft request bodies
+- **Schema validation**: Verify your API accepts valid schema-compliant data
+- **CI/CD**: Automated testing without maintaining example data
+
+**Notes:**
+- Examples always take precedence over schema generation
+- Optional fields have a 50% chance of being included
+- Arrays generate 2 items by default
+- Supports `oneOf`, `anyOf`, `allOf` schema composition
+- Works with all other CLI features (parallel, filters, auth, etc.)
 
 ### Enhanced Error Messages
 

@@ -217,6 +217,144 @@ function loadSpec(filePath) {
     }
 }
 /**
+ * Generate a request body from a JSON Schema definition
+ */
+function generateBodyFromSchema(schema) {
+    if (!schema) {
+        return {};
+    }
+    // If there's an example, use it
+    if (schema.example !== undefined) {
+        return schema.example;
+    }
+    // Generate based on type
+    switch (schema.type) {
+        case 'object':
+            const obj = {};
+            const properties = schema.properties || {};
+            const required = schema.required || [];
+            // Generate required fields first
+            for (const key of required) {
+                if (properties[key]) {
+                    obj[key] = generateValueFromSchema(properties[key]);
+                }
+            }
+            // Optionally add some non-required fields (50% chance for each)
+            for (const key in properties) {
+                if (!required.includes(key) && Math.random() > 0.5) {
+                    obj[key] = generateValueFromSchema(properties[key]);
+                }
+            }
+            return obj;
+        case 'array':
+            const items = schema.items || {};
+            // Generate array with 2 items by default
+            return [
+                generateValueFromSchema(items),
+                generateValueFromSchema(items)
+            ];
+        default:
+            return generateValueFromSchema(schema);
+    }
+}
+/**
+ * Generate a value from a JSON Schema property definition
+ */
+function generateValueFromSchema(schema) {
+    if (!schema) {
+        return null;
+    }
+    // Use example if available
+    if (schema.example !== undefined) {
+        return schema.example;
+    }
+    // Use default if available
+    if (schema.default !== undefined) {
+        return schema.default;
+    }
+    // Use enum first value if available
+    if (schema.enum && schema.enum.length > 0) {
+        return schema.enum[0];
+    }
+    // Generate based on type
+    switch (schema.type) {
+        case 'string':
+            // Handle format-specific strings
+            if (schema.format === 'email') {
+                return 'test@example.com';
+            }
+            else if (schema.format === 'uri' || schema.format === 'url') {
+                return 'https://example.com';
+            }
+            else if (schema.format === 'date') {
+                return '2025-01-01';
+            }
+            else if (schema.format === 'date-time') {
+                return '2025-01-01T00:00:00Z';
+            }
+            else if (schema.format === 'uuid') {
+                return '123e4567-e89b-12d3-a456-426614174000';
+            }
+            // Regular string with min/max length consideration
+            const minLength = schema.minLength || 1;
+            const maxLength = schema.maxLength || 10;
+            const length = Math.min(maxLength, Math.max(minLength, 5));
+            return 'test'.padEnd(length, 'x');
+        case 'number':
+        case 'integer':
+            const min = schema.minimum !== undefined ? schema.minimum : 0;
+            const max = schema.maximum !== undefined ? schema.maximum : 100;
+            const value = Math.floor((min + max) / 2);
+            return schema.type === 'integer' ? Math.floor(value) : value;
+        case 'boolean':
+            return true;
+        case 'array':
+            const items = schema.items || {};
+            // Generate array with 2 items
+            return [
+                generateValueFromSchema(items),
+                generateValueFromSchema(items)
+            ];
+        case 'object':
+            const obj = {};
+            const properties = schema.properties || {};
+            const required = schema.required || [];
+            // Generate all required fields
+            for (const key of required) {
+                if (properties[key]) {
+                    obj[key] = generateValueFromSchema(properties[key]);
+                }
+            }
+            // Add some optional fields
+            for (const key in properties) {
+                if (!required.includes(key) && Math.random() > 0.5) {
+                    obj[key] = generateValueFromSchema(properties[key]);
+                }
+            }
+            return obj;
+        case 'null':
+            return null;
+        default:
+            // If oneOf/anyOf/allOf exists, use the first schema
+            if (schema.oneOf && schema.oneOf.length > 0) {
+                return generateValueFromSchema(schema.oneOf[0]);
+            }
+            if (schema.anyOf && schema.anyOf.length > 0) {
+                return generateValueFromSchema(schema.anyOf[0]);
+            }
+            if (schema.allOf && schema.allOf.length > 0) {
+                // Merge all schemas in allOf
+                let merged = {};
+                for (const subSchema of schema.allOf) {
+                    const generated = generateValueFromSchema(subSchema);
+                    merged = { ...merged, ...generated };
+                }
+                return merged;
+            }
+            return 'test';
+    }
+}
+/**
  * Replace path parameters like {id} with actual values
  */
 function replacePlaceholders(pathStr) {
@@ -298,19 +436,28 @@ async function testEndpoint(baseUrl, pathStr, method, operation, verbose = false
             case 'GET':
                 response = await axios_1.default.get(url, config);
                 break;
-            case 'POST':
-                // Use requestBody schema if available, otherwise empty object
-                const postBody = operation.requestBody?.content?.['application/json']?.example || {};
+            case 'POST': {
+                // Generate body from schema or use example
+                const contentSchema = operation.requestBody?.content?.['application/json'];
+                const postBody = contentSchema?.example ||
+                    (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
                 response = await axios_1.default.post(url, postBody, config);
                 break;
-            case 'PUT':
-                const putBody = operation.requestBody?.content?.['application/json']?.example || {};
+            }
+            case 'PUT': {
+                const contentSchema = operation.requestBody?.content?.['application/json'];
+                const putBody = contentSchema?.example ||
+                    (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
                 response = await axios_1.default.put(url, putBody, config);
                 break;
-            case 'PATCH':
-                const patchBody = operation.requestBody?.content?.['application/json']?.example || {};
+            }
+            case 'PATCH': {
+                const contentSchema = operation.requestBody?.content?.['application/json'];
+                const patchBody = contentSchema?.example ||
+                    (contentSchema?.schema ? generateBodyFromSchema(contentSchema.schema) : {});
                 response = await axios_1.default.patch(url, patchBody, config);
                 break;
+            }
             case 'DELETE':
                 response = await axios_1.default.delete(url, config);
                 break;
