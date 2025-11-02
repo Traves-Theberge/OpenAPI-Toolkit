@@ -8,6 +8,7 @@ interface TestOptions {
     authQuery?: string;
     authBasic?: string;
     header?: string[];
+    methods?: string;
 }
 export declare function runTests(specPath: string, baseUrl: string, options?: TestOptions): Promise<void>;
 export {};

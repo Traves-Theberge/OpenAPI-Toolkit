@@ -181,7 +181,7 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 ---
 
-## Phase 3: Advanced Features (3 of 15 Complete) 🎯
+## Phase 3: Advanced Features (4 of 15 Complete) 🎯
 
 ### ✅ Completed Features (Phase 3)
 
@@ -228,9 +228,23 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 - **Testing**: Verified with HTTPBin, tested with authentication, tested overriding defaults
 - **Documentation**: Comprehensive README section with format, use cases, and examples
 
+#### 4. Filter by HTTP Method
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - `-m` / `--methods` flag with comma-separated methods
+  - Case-insensitive method matching (GET, get, GeT all work)
+  - Trims whitespace from method names
+  - Skips endpoints that don't match the filter
+  - Supports all 7 HTTP methods (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)
+- **Files**: `src/cli.ts` (line 42), `src/commands/test.ts` (lines 34, 51-64)
+- **Use Cases**: Read-only testing (GET), write operations testing, smoke tests, debugging, CI/CD stages
+- **Testing**: Tested GET only, POST only, multiple methods (GET,POST), case insensitivity, unit tests pass
+- **Documentation**: Comprehensive README section with examples and use cases
+
 ---
 
-### 🚀 Planned Features (12 remaining)
+### 🚀 Planned Features (11 remaining)
 
 #### High Priority
 
@@ -288,35 +302,28 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 #### Low Priority
 
-9. **Filter by HTTP Method** ⭐
-    - `--methods GET,POST` flag
-    - Only test specified methods
-    - Faster targeted testing
-    - **Complexity**: Low
-    - **Impact**: Low
-
-10. **Filter by Path Pattern** ⭐
+9. **Filter by Path Pattern** ⭐
     - `--paths "/users/*"` flag
     - Glob pattern matching
     - Subset testing
     - **Complexity**: Low
     - **Impact**: Low
 
-11. **Quiet Mode** ⭐
+10. **Quiet Mode** ⭐
     - `--quiet` / `-q` flag
     - No output except errors
     - Only final exit code
     - **Complexity**: Low
     - **Impact**: Low
 
-12. **Watch Mode** ⭐
+11. **Watch Mode** ⭐
     - `--watch` flag
     - Re-run on spec file changes
     - Development workflow
     - **Complexity**: Medium
     - **Impact**: Low
 
-13. **Progress Bar** ⭐
+12. **Progress Bar** ⭐
     - Show progress during long test runs
     - "Testing 5/50 endpoints..."
     - Spinner animation

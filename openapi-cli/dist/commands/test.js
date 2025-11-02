@@ -51,10 +51,19 @@ async function runTests(specPath, baseUrl, options = {}) {
     let failureCount = 0;
     // Parse timeout option
     const timeoutMs = options.timeout ? parseInt(options.timeout, 10) : 10000;
+    // Parse methods filter
+    const allowedMethods = options.methods
+        ? options.methods.split(',').map(m => m.trim().toUpperCase())
+        : null;
     // For each path and method, test the endpoint
     for (const [pathStr, methods] of Object.entries(spec.paths)) {
         for (const [method, operation] of Object.entries(methods)) {
             if (typeof operation === 'object' && operation !== null) {
+                // Skip if method filter is active and this method is not in the list
+                const methodUpper = method.toUpperCase();
+                if (allowedMethods && !allowedMethods.includes(methodUpper)) {
+                    continue;
+                }
                 const result = await testEndpoint(baseUrl, pathStr, method.toUpperCase(), operation, options.verbose, timeoutMs, options);
                 results.push(result);
                 if (result.success) {

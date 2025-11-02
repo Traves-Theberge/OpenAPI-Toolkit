@@ -19,6 +19,7 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **Authentication Support** - Bearer tokens, API keys (header/query), and Basic authentication
 - **Custom Timeouts** - Configurable request timeouts for slow APIs or fast-fail scenarios
 - **Custom Headers** - Add custom HTTP headers to all requests (repeatable -H flag)
+- **Method Filtering** - Test only specific HTTP methods (--methods GET,POST)
 
 ## Installation
 
@@ -96,6 +97,9 @@ openapi-test test path/to/spec.yaml http://api.example.com --auth-basic username
 
 # Custom headers (repeatable)
 openapi-test test path/to/spec.yaml http://api.example.com -H "X-Custom-Header: Value" -H "X-Another: Value2"
+
+# Filter by HTTP methods
+openapi-test test path/to/spec.yaml http://api.example.com --methods GET,POST
 ```
 
 **Output Example:**
@@ -355,6 +359,52 @@ openapi-test test spec.yaml https://api.example.com \
 - Custom headers are applied to all requests
 - Later headers override earlier ones if the same name is used
 - Authentication headers take precedence over custom headers
+
+### Filter by HTTP Method
+
+Test only specific HTTP methods to speed up targeted testing:
+
+```bash
+# Test only GET requests
+openapi-test test spec.yaml https://api.example.com --methods GET
+
+# Test only POST and PUT requests
+openapi-test test spec.yaml https://api.example.com -m POST,PUT
+
+# Case insensitive (get,post works too)
+openapi-test test spec.yaml https://api.example.com --methods get,post
+```
+
+**Supported Methods:**
+- GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+
+**Use Cases:**
+- **Read-only testing**: Filter to only GET requests (`--methods GET`)
+- **Write operations**: Test POST, PUT, PATCH, DELETE (`--methods POST,PUT,PATCH,DELETE`)
+- **Quick smoke tests**: Test only critical endpoints
+- **Debugging**: Isolate specific method types
+- **CI/CD stages**: Different test stages for different methods
+
+**Format:**
+- Comma-separated list of HTTP methods
+- Case-insensitive (GET, get, Get all work)
+- No spaces around commas (or quote the value)
+- Unknown methods are silently ignored
+
+**Examples:**
+```bash
+# Test only safe methods
+openapi-test test spec.yaml https://api.example.com --methods GET,HEAD,OPTIONS
+
+# Test data modification endpoints
+openapi-test test spec.yaml https://api.example.com --methods POST,PUT,DELETE
+
+# Combined with other flags
+openapi-test test spec.yaml https://api.example.com \
+  --methods GET \
+  --auth-bearer $TOKEN \
+  -v -e get-results.json
+```
 
 ### Enhanced Error Messages
 

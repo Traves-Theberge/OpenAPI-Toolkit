@@ -37,6 +37,7 @@ program
     .option('--auth-query <name>', 'Query parameter name for API key')
     .option('--auth-basic <user:pass>', 'Basic authentication (username:password)')
     .option('-H, --header <header>', 'Custom header (Name: Value), repeatable', (value, previous = []) => [...previous, value], [])
+    .option('-m, --methods <methods>', 'Filter by HTTP methods (comma-separated, e.g., GET,POST)')
     .action(async (spec, baseUrl, options) => {
     try {
         await (0, test_1.runTests)(spec, baseUrl, options);
