@@ -1,0 +1,29 @@
+openapi: 3.0.0
+info:
+  title: HTTPBin Test API
+  version: 1.0.0
+
+servers:
+  - url: https://httpbin.org
+
+paths:
+  /get:
+    get:
+      summary: Test GET request with headers
+      responses:
+        '200':
+          description: Success
+
+  /headers:
+    get:
+      summary: Test headers endpoint
+      responses:
+        '200':
+          description: Success
+
+  /bearer:
+    get:
+      summary: Test bearer auth
+      responses:
+        '200':
+          description: Success

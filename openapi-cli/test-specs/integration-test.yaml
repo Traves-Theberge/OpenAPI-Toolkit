@@ -1,0 +1,139 @@
+openapi: 3.0.0
+info:
+  title: Integration Test API
+  version: 1.0.0
+  description: Comprehensive spec for testing CLI feature combinations
+
+servers:
+  - url: https://jsonplaceholder.typicode.com
+    description: JSONPlaceholder test server
+
+paths:
+  /posts:
+    get:
+      summary: Get all posts
+      operationId: getPosts
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+
+    post:
+      summary: Create a post
+      operationId: createPost
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+                userId:
+                  type: integer
+            example:
+              title: Test Post
+              body: Test Body
+              userId: 1
+      responses:
+        '201':
+          description: Post created
+
+  /posts/{id}:
+    get:
+      summary: Get a specific post
+      operationId: getPost
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Successful response
+
+    put:
+      summary: Update a post
+      operationId: updatePost
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        content:
+          application/json:
+            example:
+              title: Updated Post
+              body: Updated Body
+              userId: 1
+      responses:
+        '200':
+          description: Post updated
+
+  /users:
+    get:
+      summary: Get all users
+      operationId: getUsers
+      responses:
+        '200':
+          description: Successful response
+
+  /users/{id}:
+    get:
+      summary: Get a specific user
+      operationId: getUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Successful response
+
+  /comments:
+    get:
+      summary: Get all comments
+      operationId: getComments
+      parameters:
+        - name: postId
+          in: query
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Successful response
+
+  /comments/{id}:
+    get:
+      summary: Get a specific comment
+      operationId: getComment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Successful response
