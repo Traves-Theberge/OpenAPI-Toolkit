@@ -51,6 +51,9 @@ Testing       bool
 ExportSuccess string
 ShowingLog    bool
 SelectedLog   int
+FilterActive  bool
+FilterInput   textinput.Model
+FilteredResults []TestResult
 }
 
 // TestResult represents the result of testing an API endpoint

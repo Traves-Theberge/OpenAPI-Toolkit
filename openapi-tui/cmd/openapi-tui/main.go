@@ -268,7 +268,39 @@ func (m model) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case 3:
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
+			// If filter is active, handle filter input first
+			if m.TestModel.FilterActive {
+				switch msg.Type {
+				case tea.KeyEsc:
+					// Esc while filtering: exit filter mode
+					m.TestModel.FilterActive = false
+					m.TestModel.FilterInput.Blur()
+					m.TestModel.FilterInput.SetValue("")
+					return m, nil
+				case tea.KeyEnter:
+					// Enter while filtering: return to menu
+					m.Screen = models.MenuScreen
+					m.TestModel = ui.InitialTestModel()
+					return m, nil
+				default:
+					// Route all other keys to filter input
+					m.TestModel.FilterInput, cmd = m.TestModel.FilterInput.Update(msg)
+					return m, cmd
+				}
+			}
+			
+			// Normal key handling when filter is not active
 			switch msg.String() {
+			case "f":
+				// Toggle filter mode
+				m.TestModel.FilterActive = !m.TestModel.FilterActive
+				if m.TestModel.FilterActive {
+					m.TestModel.FilterInput.Focus()
+				} else {
+					m.TestModel.FilterInput.Blur()
+					m.TestModel.FilterInput.SetValue("")
+				}
+				return m, nil
 			case "e":
 				if len(m.TestModel.Results) > 0 {
 					specPath := m.TestModel.SpecInput.Value()

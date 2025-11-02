@@ -289,11 +289,46 @@ All Tests:       PASSING ✅
   - Better understanding of API response times
   - Professional reporting similar to jest/pytest
 
+#### 7. Response Filtering
+- **Status**: Complete ✅
+- **Implementation**:
+  - `filter.go` (67 lines) - Filter logic
+    - `FilterResults()` - Main filtering function with multi-field matching
+    - `matchesFilter()` - Result matching logic
+  - `filter_test.go` (234 lines) - Comprehensive test suite
+    - 3 test functions, 24 test cases, all passing
+  - Added to `models.TestModel`: `FilterActive bool`, `FilterInput textinput.Model`, `FilteredResults []TestResult`
+  - Integrated into `views.go` case 3 (results display)
+  - Key binding 'f' in `main.go` case 3 to toggle filter mode
+- **Features**:
+  - ✅ Filter by status code (e.g., "200", "404", "500")
+  - ✅ Filter by HTTP method (e.g., "GET", "POST")
+  - ✅ Filter by endpoint path (partial match, e.g., "users")
+  - ✅ Filter by message text (e.g., "OK", "error")
+  - ✅ Special keywords for quick filtering:
+    - "pass", "passed", "success", "successful" → show all 2xx responses
+    - "fail", "failed", "err" → show all non-2xx responses
+  - ✅ Case-insensitive matching
+  - ✅ Whitespace trimming
+  - ✅ Real-time filtering (updates as you type)
+  - ✅ Shows "X of Y results" counter
+  - ✅ Esc to exit filter mode, Enter to return to menu
+- **Test Coverage**: 24 test cases
+  - `TestFilterResults` - 17 scenarios (status, method, endpoint, message, special keywords)
+  - `TestFilterResultsEdgeCases` - 3 edge cases (empty/nil slices, case insensitivity)
+  - `TestMatchesFilter` - 7 unit tests for match logic
+- **Impact**: 
+  - Quickly find specific results in large test suites
+  - Focus on failures with "fail" or "err" keywords
+  - Verify all 2xx responses with "pass" keyword
+  - Filter by endpoint to check specific API routes
+  - Professional UX similar to modern test runners
+
 ## Summary
 
 **Phase 1 Status**: ✅ COMPLETE (5/5 features - 100%)
-**Phase 2 Status**: 🚀 IN PROGRESS (6/15 features - 40%)
-**Test Coverage**: 24 tests passing (7 new stats tests + 17 existing, 1 skipped)
+**Phase 2 Status**: 🚀 IN PROGRESS (7/15 features - 47%)
+**Test Coverage**: 41 tests passing (24 filter + 12 stats + 17 main, 1 skipped)
 **Build Status**: ✅ All tests passing, binary builds successfully
 **Code Organization**: ✅ Standard Go project layout (cmd/ + internal/)
 **Documentation**: ✅ README, ARCHITECTURE, and PROGRESS fully updated
@@ -304,14 +339,16 @@ The application now:
 - ✅ Validates API responses against OpenAPI specifications (status codes, content types)
 - ✅ Supports multiple authentication methods (Bearer, API Key, Basic)
 - ✅ Reports detailed validation errors with spec compliance checking
-- ✅ Has comprehensive test coverage (17 tests, 1,581 lines)
+- ✅ Has comprehensive test coverage (41 tests, 1,581 lines)
 - ✅ Provides actionable error messages with helpful suggestions
 - ✅ Exports test results to JSON for CI/CD integration
 - ✅ Verbose logging mode with full request/response details
 - ✅ Configuration persistence across sessions
 - ✅ **Standard Go project layout with modular architecture**
+- ✅ **Summary statistics with pass rates and timing analysis**
+- ✅ **Real-time response filtering with special keywords**
 
 **Phase 1 Achievement**: All critical foundation features delivered! 🎉
-**Phase 2 Progress**: 6/15 features complete (40%) - DevEx improvements rolling out! 🚀
+**Phase 2 Progress**: 7/15 features complete (47%) - DevEx improvements rolling out! 🚀
 **Architecture**: Refactored to standard Go layout (cmd/ + internal/ packages)
-**Latest Feature**: Summary statistics with pass rates and timing analysis 📊
+**Latest Feature**: Response filtering with real-time search and special keywords �

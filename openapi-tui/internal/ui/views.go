@@ -247,22 +247,44 @@ func ViewTest(m models.Model) string {
 			// Show enhanced testing error with actionable suggestions
 			content = errors.FormatEnhancedError(m.TestModel.Err)
 		} else {
+			// Determine which results to display
+			resultsToShow := m.TestModel.Results
+			filterQuery := m.TestModel.FilterInput.Value()
+			
+			// Apply filter if active and query is not empty
+			if m.TestModel.FilterActive && filterQuery != "" {
+				resultsToShow = FilterResults(m.TestModel.Results, filterQuery)
+			}
+			
 			// Calculate and display summary statistics
-			stats := CalculateStats(m.TestModel.Results)
+			stats := CalculateStats(resultsToShow)
 			statsView := FormatStats(stats)
 
-			// Populate table with test results
+			// Populate table with results (filtered or all)
 			var rows []table.Row
-			for _, r := range m.TestModel.Results {
+			for _, r := range resultsToShow {
 				rows = append(rows, table.Row{r.Method, r.Endpoint, r.Status, r.Message})
 			}
 			m.TestModel.Table.SetRows(rows)
 
-			// Show success message, stats, and results table
+			// Show filter input if active
+			filterView := ""
+			if m.TestModel.FilterActive {
+				filterStyle := lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#4ECDC4")).
+					Bold(true)
+				filterView = filterStyle.Render("🔍 Filter: ") + m.TestModel.FilterInput.View() + 
+					"\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#888")).
+					Render(fmt.Sprintf("(Showing %d of %d results. Keywords: pass, fail, err)", 
+						len(resultsToShow), len(m.TestModel.Results))) + "\n\n"
+			}
+
+			// Show success message, filter, stats, and results table
 			content = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#4ECDC4")).
 				Bold(true).
 				Render("✅ Testing Complete!") + "\n\n" + 
+				filterView +
 				statsView + "\n\n" +
 				m.TestModel.Table.View()
 			
@@ -274,7 +296,7 @@ func ViewTest(m models.Model) string {
 			}
 		}
 		// Add instructions
-		instructions := "Press 'e' to export results"
+		instructions := "Press 'f' to filter | 'e' to export results"
 		if m.VerboseMode {
 			instructions += " | 'l' to view logs"
 		}
