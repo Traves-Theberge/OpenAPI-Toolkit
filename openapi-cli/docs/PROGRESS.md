@@ -181,7 +181,7 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 ---
 
-## Phase 3: Advanced Features (8 of 15 Complete) 🎯
+## Phase 3: Advanced Features (9 of 15 Complete) 🎯
 
 ### ✅ Completed Features (Phase 3)
 
@@ -303,21 +303,31 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 - **Testing**: Tested with simple types, nested objects, arrays, enums, formats | Backward compatibility verified
 - **Documentation**: Comprehensive README section with schema feature reference and examples
 
+#### 9. HTML Export Format
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - `--export-html <file>` flag for generating HTML reports
+  - Self-contained HTML with embedded CSS (no external dependencies)
+  - Responsive design (desktop, tablet, mobile)
+  - Print-friendly with media queries
+  - Professional gradient header design
+  - Color-coded HTTP methods (GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS)
+  - Summary cards: total tests, passed, failed, success rate
+  - Detailed results table with badges, status codes, durations
+- **Files**: `src/cli.ts` (lines 34, 49), `src/commands/test.ts` (lines 26, 183-203, 217-489)
+- **Visual Features**: Gradient headers, stat cards, color-coded methods, success/failure highlighting
+- **Use Cases**: Team sharing, CI/CD artifacts, documentation, debugging, historical records
+- **Testing**: Tested with success/failure scenarios, combined with JSON export, all tests pass
+- **Documentation**: Comprehensive README section with features and examples
+
 ---
 
-### 🚀 Planned Features (7 remaining)
+### 🚀 Planned Features (6 remaining)
 
 #### High Priority
 
-1. **HTML Export Format** ⭐⭐
-   - `--export-html <file>` flag
-   - Styled, readable HTML reports
-   - Embedded CSS
-   - Sortable tables
-   - **Complexity**: Medium
-   - **Impact**: Medium
-
-5. **Configuration File Support** ⭐⭐
+1. **Configuration File Support** ⭐⭐
    - `.openapi-cli.yaml` in project root or home
    - Store default options (timeout, export format, etc.)
    - Override with CLI flags

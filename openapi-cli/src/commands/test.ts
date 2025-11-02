@@ -23,6 +23,7 @@ interface TestResult {
 
 interface TestOptions {
   export?: string;
+  exportHtml?: string;
   verbose?: boolean;
   timeout?: string;
   authBearer?: string;
@@ -179,6 +180,28 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
     }
   }
 
+  // Export HTML if requested
+  if (options.exportHtml) {
+    try {
+      const html = generateHtmlReport({
+        timestamp: new Date().toISOString(),
+        specPath,
+        baseUrl,
+        totalTests: results.length,
+        passed: successCount,
+        failed: failureCount,
+        results,
+      }, spec.info.title);
+
+      fs.writeFileSync(options.exportHtml, html, 'utf-8');
+      if (!options.quiet) {
+        console.log(`\x1b[32m✓ HTML report exported to ${options.exportHtml}\x1b[0m`);
+      }
+    } catch (error) {
+      console.error(`\x1b[31m✗ Failed to export HTML: ${error instanceof Error ? error.message : String(error)}\x1b[0m`);
+    }
+  }
+
   if (failureCount > 0) {
     if (!options.quiet) {
       console.log(`\x1b[31m✗ Some tests failed\x1b[0m\n`);
@@ -189,6 +212,280 @@ export async function runTests(specPath: string, baseUrl: string, options: TestO
       console.log(`\x1b[32m✓ All tests passed!\x1b[0m\n`);
     }
   }
+}
+
+/**
+ * Generate HTML report from test results
+ */
+function generateHtmlReport(data: {
+  timestamp: string;
+  specPath: string;
+  baseUrl: string;
+  totalTests: number;
+  passed: number;
+  failed: number;
+  results: TestResult[];
+}, apiTitle: string): string {
+  const passRate = data.totalTests > 0 ? ((data.passed / data.totalTests) * 100).toFixed(1) : '0';
+  const statusClass = data.failed > 0 ? 'failed' : 'passed';
+
+  const resultsHtml = data.results.map(r => {
+    const rowClass = r.success ? 'success' : 'failure';
+    const statusBadge = r.success ? '✓' : '✗';
+    const statusBadgeClass = r.success ? 'badge-success' : 'badge-failure';
+
+    return `
+      <tr class="${rowClass}">
+        <td><span class="badge ${statusBadgeClass}">${statusBadge}</span></td>
+        <td><span class="method method-${r.method.toLowerCase()}">${r.method}</span></td>
+        <td class="endpoint">${r.endpoint}</td>
+        <td class="status">${r.status || 'N/A'}</td>
+        <td>${r.message}</td>
+        <td>${r.duration ? r.duration + 'ms' : 'N/A'}</td>
+      </tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Test Results - ${apiTitle}</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f7fa;
+      color: #2c3e50;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+    }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    .meta {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+    .meta-item {
+      display: inline-block;
+      margin-right: 20px;
+      margin-top: 5px;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      padding: 30px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stat-card.passed {
+      border-left-color: #28a745;
+    }
+    .stat-card.failed {
+      border-left-color: #dc3545;
+    }
+    .stat-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #6c757d;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      margin-top: 5px;
+    }
+    .stat-card.passed .stat-value {
+      color: #28a745;
+    }
+    .stat-card.failed .stat-value {
+      color: #dc3545;
+    }
+    .results-section {
+      padding: 30px;
+    }
+    h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    thead {
+      background: #f8f9fa;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    th {
+      text-align: left;
+      padding: 12px;
+      font-weight: 600;
+      color: #495057;
+      border-bottom: 2px solid #dee2e6;
+    }
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #f1f3f5;
+    }
+    tr.success {
+      background: #f8fff9;
+    }
+    tr.failure {
+      background: #fff5f5;
+    }
+    tr:hover {
+      background: #e9ecef;
+    }
+    .badge {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      line-height: 20px;
+      text-align: center;
+      border-radius: 50%;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    .badge-success {
+      background: #28a745;
+      color: white;
+    }
+    .badge-failure {
+      background: #dc3545;
+      color: white;
+    }
+    .method {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 12px;
+      font-family: 'Monaco', 'Courier New', monospace;
+    }
+    .method-get { background: #e3f2fd; color: #1976d2; }
+    .method-post { background: #e8f5e9; color: #388e3c; }
+    .method-put { background: #fff3e0; color: #f57c00; }
+    .method-patch { background: #fce4ec; color: #c2185b; }
+    .method-delete { background: #ffebee; color: #d32f2f; }
+    .method-head { background: #f3e5f5; color: #7b1fa2; }
+    .method-options { background: #e0f2f1; color: #00796b; }
+    .endpoint {
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .status {
+      font-weight: 600;
+    }
+    footer {
+      padding: 20px 30px;
+      background: #f8f9fa;
+      text-align: center;
+      font-size: 12px;
+      color: #6c757d;
+      border-top: 1px solid #e9ecef;
+    }
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      .container {
+        box-shadow: none;
+      }
+      tr:hover {
+        background: inherit !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🧪 API Test Results</h1>
+      <div class="meta">
+        <span class="meta-item"><strong>API:</strong> ${apiTitle}</span>
+        <span class="meta-item"><strong>Base URL:</strong> ${data.baseUrl}</span>
+        <span class="meta-item"><strong>Spec:</strong> ${data.specPath}</span>
+        <span class="meta-item"><strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString()}</span>
+      </div>
+    </header>
+
+    <div class="summary">
+      <div class="stat-card">
+        <div class="stat-label">Total Tests</div>
+        <div class="stat-value">${data.totalTests}</div>
+      </div>
+      <div class="stat-card passed">
+        <div class="stat-label">Passed</div>
+        <div class="stat-value">${data.passed}</div>
+      </div>
+      <div class="stat-card failed">
+        <div class="stat-label">Failed</div>
+        <div class="stat-value">${data.failed}</div>
+      </div>
+      <div class="stat-card ${statusClass}">
+        <div class="stat-label">Success Rate</div>
+        <div class="stat-value">${passRate}%</div>
+      </div>
+    </div>
+
+    <div class="results-section">
+      <h2>Test Results</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50px;"></th>
+            <th style="width: 80px;">Method</th>
+            <th>Endpoint</th>
+            <th style="width: 80px;">Status</th>
+            <th>Message</th>
+            <th style="width: 100px;">Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${resultsHtml}
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      Generated by <strong>OpenAPI CLI Tester</strong> | ${new Date().getFullYear()}
+    </footer>
+  </div>
+</body>
+</html>`;
 }
 
 /**

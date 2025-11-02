@@ -24,6 +24,7 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **Quiet Mode** - Suppress output except errors and exit codes for CI/CD (--quiet)
 - **Parallel Execution** - Run tests concurrently with configurable concurrency limit (--parallel 5)
 - **Schema-Based Body Generation** - Automatically generate request bodies from JSON Schema definitions
+- **HTML Export** - Generate beautiful, styled HTML reports for test results (--export-html)
 
 ## Installation
 
@@ -697,6 +698,78 @@ paths:
 - Arrays generate 2 items by default
 - Supports `oneOf`, `anyOf`, `allOf` schema composition
 - Works with all other CLI features (parallel, filters, auth, etc.)
+
+### HTML Export
+
+Generate beautiful, styled HTML reports for test results - perfect for sharing with teams or archiving:
+
+**Basic Usage:**
+```bash
+# Generate HTML report
+openapi-test test spec.yaml https://api.example.com --export-html report.html
+
+# Combine with JSON export
+openapi-test test spec.yaml https://api.example.com \
+  --export results.json \
+  --export-html report.html
+```
+
+**Features:**
+- 📊 **Summary Cards**: Total tests, passed, failed, success rate
+- 🎨 **Color-Coded Results**: Green for success, red for failures
+- 📱 **Responsive Design**: Works on desktop, tablet, and mobile
+- 🖨️ **Print-Friendly**: Optimized for PDF export and printing
+- ⚡ **Self-Contained**: All CSS embedded, no external dependencies
+- 🔍 **Detailed Table**: Method, endpoint, status, message, duration for each test
+
+**HTML Report Includes:**
+- API title and metadata (base URL, spec path, timestamp)
+- Visual summary with pass/fail statistics
+- Color-coded HTTP methods (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)
+- Success rate percentage
+- Sortable results table
+- Duration in milliseconds for each request
+- Professional gradient header design
+
+**Sample Report Structure:**
+```
+┌─────────────────────────────────────────────┐
+│ 🧪 API Test Results                         │
+│ Integration Test API                        │
+│ https://api.example.com                     │
+├─────────────────────────────────────────────┤
+│ [Total: 10] [Passed: 8] [Failed: 2] [80%]  │
+├─────────────────────────────────────────────┤
+│ ✓ GET  /users      200 OK        156ms     │
+│ ✓ POST /users      201 OK        234ms     │
+│ ✗ GET  /invalid    404 Not Found 45ms      │
+└─────────────────────────────────────────────┘
+```
+
+**Use Cases:**
+- **Team Sharing**: Email HTML reports to stakeholders
+- **CI/CD Artifacts**: Archive test results as build artifacts
+- **Documentation**: Embed in wikis or documentation sites
+- **Debugging**: Visual overview of API health
+- **Historical Records**: Track API behavior over time
+
+**Example with All Features:**
+```bash
+# Complete test run with HTML report
+openapi-test test spec.yaml https://api.example.com \
+  --parallel 10 \
+  -m GET,POST \
+  --auth-bearer "$TOKEN" \
+  -v \
+  --export-html detailed-report.html
+```
+
+**Notes:**
+- HTML file is self-contained (no external CSS/JS)
+- Compatible with all browsers (Chrome, Firefox, Safari, Edge)
+- Can be opened directly or served via web server
+- Embedded CSS uses modern flexbox/grid layouts
+- Print media queries optimize for PDF export
 
 ### Enhanced Error Messages
 

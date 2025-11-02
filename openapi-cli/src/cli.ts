@@ -31,6 +31,7 @@ program
   .argument('<spec>', 'Path to the OpenAPI spec file')
   .argument('<baseUrl>', 'Base URL of the API to test')
   .option('-e, --export <file>', 'Export results to JSON file')
+  .option('--export-html <file>', 'Export results to HTML file')
   .option('-v, --verbose', 'Show verbose output with request/response details')
   .option('-t, --timeout <ms>', 'Request timeout in milliseconds (default: 10000)', '10000')
   .option('--auth-bearer <token>', 'Bearer token authentication')
@@ -45,6 +46,7 @@ program
   .option('--parallel <limit>', 'Run tests in parallel with concurrency limit (default: 5)', '5')
   .action(async (spec: string, baseUrl: string, options: {
     export?: string;
+    exportHtml?: string;
     verbose?: boolean;
     timeout?: string;
     authBearer?: string;
