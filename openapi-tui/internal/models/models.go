@@ -16,21 +16,23 @@ MenuScreen Screen = iota
 HelpScreen
 ValidateScreen
 TestScreen
+CustomRequestScreen
 HistoryScreen
 )
 
 // Model is the main application state
 type Model struct {
-Cursor        int
-Screen        Screen
-Width         int
-Height        int
-VerboseMode   bool
-Config        Config
-ValidateModel ValidateModel
-TestModel     TestModel
-History       *TestHistory
-HistoryIndex  int  // Selected index in history view
+Cursor             int
+Screen             Screen
+Width              int
+Height             int
+VerboseMode        bool
+Config             Config
+ValidateModel      ValidateModel
+TestModel          TestModel
+CustomRequestModel CustomRequestModel
+History            *TestHistory
+HistoryIndex       int  // Selected index in history view
 }
 
 // ValidateModel holds state for the validation screen
@@ -58,6 +60,36 @@ FilterActive  bool
 FilterInput   textinput.Model
 FilteredResults []TestResult
 TestStartTime time.Time  // Track when test run started for history
+}
+
+// CustomRequestModel holds state for the custom request screen
+type CustomRequestModel struct {
+Step             int
+MethodInput      textinput.Model
+EndpointInput    textinput.Model
+HeaderKeyInput   textinput.Model
+HeaderValueInput textinput.Model
+BodyInput        textinput.Model
+Spinner          spinner.Model
+Table            table.Model
+Request          CustomRequest
+Result           *TestResult
+Err              error
+Testing          bool
+ExportSuccess    string
+ShowingLog       bool
+FilterActive     bool
+FilterInput      textinput.Model
+}
+
+// CustomRequest holds a manually created API request
+type CustomRequest struct {
+Method      string
+Endpoint    string
+Headers     map[string]string
+Body        string
+QueryParams map[string]string
+IsCustom    bool // Flag for history tracking
 }
 
 // TestResult represents the result of testing an API endpoint

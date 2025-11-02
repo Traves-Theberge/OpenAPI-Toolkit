@@ -14,6 +14,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -95,6 +96,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateValidate(msg)
 		case models.TestScreen:
 			return m.updateTest(msg)
+		case models.CustomRequestScreen:
+			return m.updateCustomRequest(msg)
 		case models.HistoryScreen:
 			return m.updateHistory(msg)
 		}
@@ -102,9 +105,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.Screen == models.TestScreen {
 			return m.updateTest(msg)
 		}
+		if m.Screen == models.CustomRequestScreen {
+			return m.updateCustomRequest(msg)
+		}
 	case testing.TestErrorMsg:
 		if m.Screen == models.TestScreen {
 			return m.updateTest(msg)
+		}
+		if m.Screen == models.CustomRequestScreen {
+			return m.updateCustomRequest(msg)
 		}
 	}
 	return m, nil
@@ -120,7 +129,7 @@ func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.Cursor--
 		}
 	case "down", "j":
-		if m.Cursor < 3 {
+		if m.Cursor < 5 {
 			m.Cursor++
 		}
 	case "h", "?":
@@ -140,9 +149,17 @@ func (m model) updateMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.Screen = models.TestScreen
 			return m, nil
 		case 2:
-			m.Screen = models.HelpScreen
+			m.Screen = models.CustomRequestScreen
+			m.CustomRequestModel = ui.InitialCustomRequestModel()
 			return m, nil
 		case 3:
+			m.Screen = models.HistoryScreen
+			m.HistoryIndex = 0
+			return m, nil
+		case 4:
+			m.Screen = models.HelpScreen
+			return m, nil
+		case 5:
 			return m, tea.Quit
 		}
 	}
@@ -460,6 +477,191 @@ func (m model) updateHistory(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// updateCustomRequest handles events in the custom request screen
+func (m model) updateCustomRequest(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch m.CustomRequestModel.Step {
+	case 0: // Method input
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEnter:
+				method := strings.ToUpper(strings.TrimSpace(m.CustomRequestModel.MethodInput.Value()))
+				if method == "" {
+					m.CustomRequestModel.Err = fmt.Errorf("HTTP method cannot be empty")
+					return m, nil
+				}
+				validMethods := map[string]bool{"GET": true, "POST": true, "PUT": true, "PATCH": true, "DELETE": true, "HEAD": true, "OPTIONS": true}
+				if !validMethods[method] {
+					m.CustomRequestModel.Err = fmt.Errorf("invalid HTTP method: %s (use GET, POST, PUT, PATCH, DELETE, HEAD, or OPTIONS)", method)
+					return m, nil
+				}
+				m.CustomRequestModel.Request.Method = method
+				m.CustomRequestModel.Step = 1
+				m.CustomRequestModel.MethodInput.Blur()
+				m.CustomRequestModel.EndpointInput.Focus()
+				m.CustomRequestModel.Err = nil
+				return m, nil
+			case tea.KeyCtrlC, tea.KeyEsc:
+				m.Screen = models.MenuScreen
+				m.CustomRequestModel = ui.InitialCustomRequestModel()
+				return m, nil
+			}
+			m.CustomRequestModel.MethodInput, cmd = m.CustomRequestModel.MethodInput.Update(msg)
+		}
+	
+	case 1: // Endpoint input
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEnter:
+				endpoint := strings.TrimSpace(m.CustomRequestModel.EndpointInput.Value())
+				if endpoint == "" {
+					m.CustomRequestModel.Err = fmt.Errorf("endpoint URL cannot be empty")
+					return m, nil
+				}
+				m.CustomRequestModel.Request.Endpoint = endpoint
+				m.CustomRequestModel.Step = 2
+				m.CustomRequestModel.EndpointInput.Blur()
+				m.CustomRequestModel.HeaderKeyInput.Focus()
+				m.CustomRequestModel.Err = nil
+				return m, nil
+			case tea.KeyCtrlC, tea.KeyEsc:
+				m.Screen = models.MenuScreen
+				m.CustomRequestModel = ui.InitialCustomRequestModel()
+				return m, nil
+			}
+			m.CustomRequestModel.EndpointInput, cmd = m.CustomRequestModel.EndpointInput.Update(msg)
+		}
+	
+	case 2: // Headers input
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEnter:
+				headerKey := strings.TrimSpace(m.CustomRequestModel.HeaderKeyInput.Value())
+				if headerKey == "" {
+					// Skip headers, go to body
+					m.CustomRequestModel.Step = 3
+					m.CustomRequestModel.HeaderKeyInput.Blur()
+					m.CustomRequestModel.BodyInput.Focus()
+					m.CustomRequestModel.Err = nil
+					return m, nil
+				}
+				// Need header value
+				if m.CustomRequestModel.HeaderValueInput.Value() == "" {
+					m.CustomRequestModel.HeaderKeyInput.Blur()
+					m.CustomRequestModel.HeaderValueInput.Focus()
+					return m, nil
+				}
+				// Save header
+				headerValue := strings.TrimSpace(m.CustomRequestModel.HeaderValueInput.Value())
+				m.CustomRequestModel.Request.Headers[headerKey] = headerValue
+				// Reset for next header
+				m.CustomRequestModel.HeaderKeyInput.SetValue("")
+				m.CustomRequestModel.HeaderValueInput.SetValue("")
+				m.CustomRequestModel.HeaderValueInput.Blur()
+				m.CustomRequestModel.HeaderKeyInput.Focus()
+				m.CustomRequestModel.Err = nil
+				return m, nil
+			case tea.KeyCtrlC, tea.KeyEsc:
+				m.Screen = models.MenuScreen
+				m.CustomRequestModel = ui.InitialCustomRequestModel()
+				return m, nil
+			}
+			if m.CustomRequestModel.HeaderKeyInput.Focused() {
+				m.CustomRequestModel.HeaderKeyInput, cmd = m.CustomRequestModel.HeaderKeyInput.Update(msg)
+			} else {
+				m.CustomRequestModel.HeaderValueInput, cmd = m.CustomRequestModel.HeaderValueInput.Update(msg)
+			}
+		}
+	
+	case 3: // Body input
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEnter:
+				body := strings.TrimSpace(m.CustomRequestModel.BodyInput.Value())
+				if body != "" {
+					// Validate JSON
+					if err := testing.ValidateJSONBody(body); err != nil {
+						m.CustomRequestModel.Err = fmt.Errorf("invalid JSON: %v", err)
+						return m, nil
+					}
+				}
+				m.CustomRequestModel.Request.Body = body
+				m.CustomRequestModel.Step = 4
+				m.CustomRequestModel.BodyInput.Blur()
+				m.CustomRequestModel.Testing = true
+				// Execute the request
+				return m, testing.ExecuteCustomRequestCmd(
+					m.CustomRequestModel.Request.Method,
+					m.CustomRequestModel.Request.Endpoint,
+					m.CustomRequestModel.Request.Headers,
+					m.CustomRequestModel.Request.Body,
+					nil, // TODO: Add auth support
+					m.VerboseMode,
+				)
+			case tea.KeyCtrlC, tea.KeyEsc:
+				m.Screen = models.MenuScreen
+				m.CustomRequestModel = ui.InitialCustomRequestModel()
+				return m, nil
+			}
+			m.CustomRequestModel.BodyInput, cmd = m.CustomRequestModel.BodyInput.Update(msg)
+		}
+	
+	case 4: // Executing request (showing spinner)
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyCtrlC, tea.KeyEsc:
+				m.Screen = models.MenuScreen
+				m.CustomRequestModel = ui.InitialCustomRequestModel()
+				return m, nil
+			}
+		case testing.TestCompleteMsg:
+			if len(msg.Results) > 0 {
+				result := msg.Results[0]
+				m.CustomRequestModel.Result = &result
+				m.CustomRequestModel.Err = nil
+				m.CustomRequestModel.Step = 5
+				m.CustomRequestModel.Testing = false
+				
+				// Save to history
+				entry := models.CreateHistoryEntry(
+					"Custom Request",
+					m.CustomRequestModel.Request.Endpoint,
+					msg.Results,
+					result.Duration,
+				)
+				m.History.AddEntry(entry)
+				_ = models.SaveHistory(m.History)
+			}
+			return m, nil
+		case testing.TestErrorMsg:
+			m.CustomRequestModel.Err = msg.Err
+			m.CustomRequestModel.Step = 5
+			m.CustomRequestModel.Testing = false
+			return m, nil
+		}
+		m.CustomRequestModel.Spinner, cmd = m.CustomRequestModel.Spinner.Update(msg)
+	
+	case 5: // Show results
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
+				m.Screen = models.MenuScreen
+				m.CustomRequestModel = ui.InitialCustomRequestModel()
+				return m, nil
+			}
+		}
+	}
+	
+	return m, cmd
+}
+
 // View renders the current screen based on the application state
 func (m model) View() string {
 	switch m.Screen {
@@ -471,6 +673,8 @@ func (m model) View() string {
 		return ui.ViewValidate(m.Model)
 	case models.TestScreen:
 		return ui.ViewTest(m.Model)
+	case models.CustomRequestScreen:
+		return ui.ViewCustomRequest(m.Model)
 	case models.HistoryScreen:
 		return ui.ViewHistory(m.Model)
 	default:

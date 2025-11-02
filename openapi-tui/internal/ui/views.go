@@ -25,7 +25,7 @@ func ViewMenu(m models.Model) string {
 
 	// Menu options with styling - highlight selected item
 	var menuItems []string
-	options := []string{"📋 Validate OpenAPI Spec", "🧪 Test API", "❓ Help", "👋 Quit"}
+	options := []string{"📋 Validate OpenAPI Spec", "🧪 Test API", "✏️  Custom Request", "📜 History", "❓ Help", "👋 Quit"}
 
 	for i, option := range options {
 		var cursor string
@@ -481,4 +481,161 @@ func ViewHistory(m models.Model) string {
 		Render("↑/↓: Navigate | Enter: Replay selected test | Esc: Return to results")
 
 	return title + "\n\n" + t.View() + "\n\n" + instructions
+}
+
+// ViewCustomRequest renders the custom request screen
+func ViewCustomRequest(m models.Model) string {
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Background(lipgloss.Color("#7D56F4")).
+		Padding(1, 2).
+		MarginBottom(1).
+		Render("✏️  Custom API Request")
+
+	crm := m.CustomRequestModel
+
+	var content string
+
+	switch crm.Step {
+	case 0: // Method input
+		stepTitle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#4ECDC4")).
+			Render("Step 1/4: HTTP Method")
+		
+		input := crm.MethodInput.View()
+		hint := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("Enter HTTP method (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)")
+		
+		content = fmt.Sprintf("%s\n\n%s\n%s", stepTitle, input, hint)
+
+	case 1: // Endpoint input
+		stepTitle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#4ECDC4")).
+			Render("Step 2/4: Endpoint URL")
+		
+		methodInfo := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render(fmt.Sprintf("Method: %s", crm.Request.Method))
+		
+		input := crm.EndpointInput.View()
+		hint := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("Enter full URL (e.g., https://api.example.com/users)")
+		
+		content = fmt.Sprintf("%s\n%s\n\n%s\n%s", stepTitle, methodInfo, input, hint)
+
+	case 2: // Headers input
+		stepTitle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#4ECDC4")).
+			Render("Step 3/4: Request Headers (Optional)")
+		
+		methodInfo := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render(fmt.Sprintf("Method: %s | Endpoint: %s", crm.Request.Method, crm.Request.Endpoint))
+		
+		var headersList string
+		if len(crm.Request.Headers) > 0 {
+			headersList = "\nCurrent Headers:\n"
+			for k, v := range crm.Request.Headers {
+				headersList += fmt.Sprintf("  %s: %s\n", k, v)
+			}
+		}
+		
+		var inputs string
+		if crm.HeaderKeyInput.Focused() {
+			inputs = "Header Key:\n" + crm.HeaderKeyInput.View()
+		} else {
+			inputs = fmt.Sprintf("Header Key: %s\n\nHeader Value:\n%s", crm.HeaderKeyInput.Value(), crm.HeaderValueInput.View())
+		}
+		
+		hint := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("\nEnter header name, then value. Press Enter on empty key to continue to body.")
+		
+		content = fmt.Sprintf("%s\n%s%s\n\n%s%s", stepTitle, methodInfo, headersList, inputs, hint)
+
+	case 3: // Body input
+		stepTitle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#4ECDC4")).
+			Render("Step 4/4: Request Body (Optional)")
+		
+		methodInfo := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render(fmt.Sprintf("Method: %s | Endpoint: %s", crm.Request.Method, crm.Request.Endpoint))
+		
+		var headersList string
+		if len(crm.Request.Headers) > 0 {
+			headersList = "\nHeaders:\n"
+			for k, v := range crm.Request.Headers {
+				headersList += fmt.Sprintf("  %s: %s\n", k, v)
+			}
+		}
+		
+		input := crm.BodyInput.View()
+		hint := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("\nEnter JSON body (or leave empty). Press Enter to execute request.")
+		
+		content = fmt.Sprintf("%s\n%s%s\n\nBody:\n%s%s", stepTitle, methodInfo, headersList, input, hint)
+
+	case 4: // Executing
+		statusMsg := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#4ECDC4")).
+			Render(fmt.Sprintf("\n%s Sending %s request to %s...\n", crm.Spinner.View(), crm.Request.Method, crm.Request.Endpoint))
+		content = statusMsg
+
+	case 5: // Results
+		if crm.Result != nil {
+			resultStyle := lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("#00FF00"))
+			if crm.Result.Status != "200" && crm.Result.Status != "201" && crm.Result.Status != "204" {
+				resultStyle = resultStyle.Foreground(lipgloss.Color("#FF6B6B"))
+			}
+			
+			statusLine := resultStyle.Render(fmt.Sprintf("✓ %s %s", crm.Result.Status, crm.Result.Method))
+			endpoint := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#888")).
+				Render(fmt.Sprintf("Endpoint: %s", crm.Result.Endpoint))
+			duration := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#888")).
+				Render(fmt.Sprintf("Duration: %s", crm.Result.Duration))
+			
+			message := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#4ECDC4")).
+				MarginTop(1).
+				Render(crm.Result.Message)
+			
+			content = fmt.Sprintf("%s\n%s\n%s\n%s", statusLine, endpoint, duration, message)
+		}
+	}
+
+	// Error display
+	var errorMsg string
+	if crm.Err != nil {
+		errorMsg = "\n\n" + lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF6B6B")).
+			Bold(true).
+			Render(fmt.Sprintf("❌ Error: %v", crm.Err))
+	}
+
+	// Instructions
+	var instructions string
+	if crm.Step < 4 {
+		instructions = "\n\n" + lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("Enter: Next | Esc: Cancel and return to menu")
+	} else if crm.Step == 5 {
+		instructions = "\n\n" + lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#888")).
+			Render("Enter/Esc: Return to menu")
+	}
+
+	return title + "\n\n" + content + errorMsg + instructions
 }

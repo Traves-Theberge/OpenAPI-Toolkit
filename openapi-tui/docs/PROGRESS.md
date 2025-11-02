@@ -583,7 +583,95 @@ The application now:
   - **Performance monitoring** - Track response time trends
   - **Audit trail** - Complete record of all testing activity
 
+#### 12. Custom Request Editing
+- **Status**: Complete ✅
+- **Implementation**:
+  - `custom.go` (200+ lines) - Custom request execution backend
+    - `ExecuteCustomRequest()` - Main execution function for manual requests
+    - `ExecuteCustomRequestCmd()` - Bubble Tea command wrapper
+    - `ValidateJSONBody()` - JSON validation helper
+    - `FormatJSONBody()` - Pretty-print JSON formatter
+    - HTTP client with 30s timeout
+    - Support for all HTTP methods (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)
+    - Authentication integration (Bearer, API Key, Basic)
+    - Verbose logging with LogEntry capture
+  - `custom_test.go` (380+ lines) - Comprehensive test suite
+    - 12 test functions, 45+ test cases
+    - `TestExecuteCustomRequest` - Basic execution
+    - `TestExecuteCustomRequest_Methods` - All 7 HTTP methods
+    - `TestExecuteCustomRequest_InvalidMethod` - Error handling
+    - `TestExecuteCustomRequest_WithHeaders` - Custom header support
+    - `TestExecuteCustomRequest_WithBody` - JSON body handling
+    - `TestExecuteCustomRequest_InvalidJSON` - JSON validation
+    - `TestExecuteCustomRequest_WithAuth` - 3 auth types (Bearer, API Key, Basic)
+    - `TestExecuteCustomRequest_VerboseLogging` - Log capture
+    - `TestValidateJSONBody` - 7 validation scenarios
+    - `TestFormatJSONBody` - 4 formatting scenarios
+    - `TestExecuteCustomRequestCmd` - Bubble Tea integration
+  - `models.go` - Added CustomRequest types
+    - `CustomRequestScreen` constant (new screen)
+    - `CustomRequestModel` struct with Step-based state machine
+    - Fields: Step, inputs (Method/Endpoint/Headers/Body), Spinner, Table, Result, Err, Testing flags
+    - `CustomRequest` struct: Method, Endpoint, Headers map, Body, QueryParams map, IsCustom bool
+  - `ui_helpers.go` - Added `InitialCustomRequestModel()` (80+ lines)
+    - Initializes all 5 text inputs with placeholders and widths
+    - Creates spinner (Dot style, cyan color)
+    - Creates table for results (4 columns)
+    - Initializes empty Headers and QueryParams maps
+  - `views.go` - Added `ViewCustomRequest()` (140+ lines)
+    - Multi-step form rendering (6 steps: 0-5)
+    - Step 0: Method input (GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS)
+    - Step 1: Endpoint URL input
+    - Step 2: Headers input (repeatable, optional)
+    - Step 3: Body input (JSON validated, optional)
+    - Step 4: Executing spinner
+    - Step 5: Results display (status, endpoint, duration, message)
+    - Color-coded status (green 2xx, red errors)
+    - Context-aware instructions per step
+  - `main.go` - Full integration (180+ lines of handler code)
+    - Updated `ViewMenu()` to show 6 options (added Custom Request, History)
+    - Updated `updateMenu()` cursor range 0-5, Case 2 → CustomRequestScreen
+    - Added `updateCustomRequest()` state machine (180 lines)
+      - Case 0: Method validation (checks against valid methods list)
+      - Case 1: Endpoint validation (non-empty check)
+      - Case 2: Header collection (key→value flow, Enter on empty key skips)
+      - Case 3: Body validation (JSON parse) → triggers ExecuteCustomRequestCmd
+      - Case 4: Spinner during execution, handles TestComplete/TestError
+      - Case 5: Results display, Enter/Esc returns to menu
+    - History integration: Saves custom requests with "Custom Request" spec path
+    - TestCompleteMsg/TestErrorMsg handling for CustomRequestScreen
+    - CustomRequestScreen routing in Update() and View()
+- **Features**:
+  - ✅ Manual API testing with full control over all request parameters
+  - ✅ Multi-step guided form (6 steps from method to results)
+  - ✅ All HTTP methods supported (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)
+  - ✅ Invalid method rejection with clear error messages
+  - ✅ Repeatable header collection (add multiple headers, Enter on empty key to skip)
+  - ✅ JSON body validation with helpful error messages
+  - ✅ Pretty-print JSON formatting
+  - ✅ Optional headers and body (can skip)
+  - ✅ Color-coded results (green for 2xx success, red for errors)
+  - ✅ History integration (custom requests saved like auto-generated tests)
+  - ✅ Verbose logging support (request/response details)
+  - ✅ Authentication integration (Bearer, API Key, Basic)
+  - ✅ Professional UX with step-by-step guidance
+  - ✅ Context-aware instructions at each step
+- **Test Coverage**: 12 test functions, 45+ test cases (all passing)
+  - Basic execution, all HTTP methods, error handling
+  - Custom headers, JSON bodies, invalid JSON
+  - All 3 authentication types
+  - Verbose logging, validation, formatting
+  - Bubble Tea command wrapper
+- **Impact**:
+  - **Manual testing for edge cases** - Test scenarios not covered by OpenAPI spec
+  - **Debugging specific requests** - Craft exact requests to reproduce issues
+  - **API exploration** - Try endpoints not in spec or with custom parameters
+  - **Integration testing** - Test complex workflows with custom data
+  - **Professional UX** - Guided form prevents mistakes
+  - **History tracking** - Review and replay custom requests
+  - **Complements auto-tests** - Combines auto-generated coverage with manual flexibility
+
 **Phase 1 Achievement**: All critical foundation features delivered! 🎉
-**Phase 2 Progress**: 10/15 features complete (67%) - Two-thirds done! 🚀
+**Phase 2 Progress**: 12/15 features complete (80%) - Four-fifths done! 🚀
 **Architecture**: Refactored to standard Go layout (cmd/ + internal/ packages)
-**Latest Feature**: Request History - Track and replay test runs with persistent history 📜
+**Latest Feature**: Custom Request Editing - Manual API testing with multi-step form �️
