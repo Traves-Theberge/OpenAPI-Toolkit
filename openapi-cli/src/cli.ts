@@ -40,6 +40,7 @@ program
   .option('--auth-basic <user:pass>', 'Basic authentication (username:password)')
   .option('-H, --header <header>', 'Custom header (Name: Value), repeatable', (value, previous: string[] = []) => [...previous, value], [])
   .option('-m, --methods <methods>', 'Filter by HTTP methods (comma-separated, e.g., GET,POST)')
+  .option('-q, --quiet', 'Quiet mode - only show errors and final exit code')
   .action(async (spec: string, baseUrl: string, options: {
     export?: string;
     verbose?: boolean;
@@ -51,6 +52,7 @@ program
     authBasic?: string;
     header?: string[];
     methods?: string;
+    quiet?: boolean;
   }) => {
     try {
       await runTests(spec, baseUrl, options);

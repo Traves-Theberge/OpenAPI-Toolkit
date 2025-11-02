@@ -44,8 +44,10 @@ const path = __importStar(require("path"));
 async function runTests(specPath, baseUrl, options = {}) {
     // Load and parse spec
     const spec = loadSpec(specPath);
-    console.log(`\n🧪 Testing API: ${spec.info.title}`);
-    console.log(`📍 Base URL: ${baseUrl}\n`);
+    if (!options.quiet) {
+        console.log(`\n🧪 Testing API: ${spec.info.title}`);
+        console.log(`📍 Base URL: ${baseUrl}\n`);
+    }
     const results = [];
     let successCount = 0;
     let failureCount = 0;
@@ -68,24 +70,29 @@ async function runTests(specPath, baseUrl, options = {}) {
                 results.push(result);
                 if (result.success) {
                     successCount++;
-                    console.log(`\x1b[32m✓\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.status} ${result.message}`);
-                    if (options.verbose && result.duration) {
-                        console.log(`  \x1b[90mDuration: ${result.duration}ms\x1b[0m`);
-                        if (result.responseHeaders) {
-                            console.log(`  \x1b[90mResponse Headers: ${JSON.stringify(result.responseHeaders)}\x1b[0m`);
+                    if (!options.quiet) {
+                        console.log(`\x1b[32m✓\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.status} ${result.message}`);
+                        if (options.verbose && result.duration) {
+                            console.log(`  \x1b[90mDuration: ${result.duration}ms\x1b[0m`);
+                            if (result.responseHeaders) {
+                                console.log(`  \x1b[90mResponse Headers: ${JSON.stringify(result.responseHeaders)}\x1b[0m`);
+                            }
                         }
                     }
                 }
                 else {
                     failureCount++;
+                    // Always show errors even in quiet mode
                     console.log(`\x1b[31m✗\x1b[0m ${result.method.padEnd(7)} ${result.endpoint.padEnd(40)} - ${result.message}`);
                 }
             }
         }
     }
     // Summary
-    console.log(`\n${'='.repeat(80)}`);
-    console.log(`📊 Summary: ${successCount} passed, ${failureCount} failed, ${results.length} total`);
+    if (!options.quiet) {
+        console.log(`\n${'='.repeat(80)}`);
+        console.log(`📊 Summary: ${successCount} passed, ${failureCount} failed, ${results.length} total`);
+    }
     // Export results if requested
     if (options.export) {
         try {
@@ -109,18 +116,24 @@ async function runTests(specPath, baseUrl, options = {}) {
                 })),
             };
             fs.writeFileSync(options.export, JSON.stringify(exportData, null, 2), 'utf-8');
-            console.log(`\x1b[32m✓ Results exported to ${options.export}\x1b[0m`);
+            if (!options.quiet) {
+                console.log(`\x1b[32m✓ Results exported to ${options.export}\x1b[0m`);
+            }
         }
         catch (error) {
             console.error(`\x1b[31m✗ Failed to export results: ${error instanceof Error ? error.message : String(error)}\x1b[0m`);
         }
     }
     if (failureCount > 0) {
-        console.log(`\x1b[31m✗ Some tests failed\x1b[0m\n`);
+        if (!options.quiet) {
+            console.log(`\x1b[31m✗ Some tests failed\x1b[0m\n`);
+        }
         process.exit(1);
     }
     else {
-        console.log(`\x1b[32m✓ All tests passed!\x1b[0m\n`);
+        if (!options.quiet) {
+            console.log(`\x1b[32m✓ All tests passed!\x1b[0m\n`);
+        }
     }
 }
 function loadSpec(filePath) {

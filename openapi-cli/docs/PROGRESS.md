@@ -181,7 +181,7 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 
 ---
 
-## Phase 3: Advanced Features (4 of 15 Complete) 🎯
+## Phase 3: Advanced Features (5 of 15 Complete) 🎯
 
 ### ✅ Completed Features (Phase 3)
 
@@ -242,9 +242,23 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
 - **Testing**: Tested GET only, POST only, multiple methods (GET,POST), case insensitivity, unit tests pass
 - **Documentation**: Comprehensive README section with examples and use cases
 
+#### 5. Quiet Mode
+- **Status**: Complete ✅
+- **Completed**: November 2025
+- **Implementation**:
+  - `-q` / `--quiet` flag
+  - Suppresses all output except errors
+  - Hides: test progress, success messages, summaries, export confirmations
+  - Shows: error messages, export failures
+  - Exit codes preserved (0=success, 1=failure)
+- **Files**: `src/cli.ts` (line 43), `src/commands/test.ts` (lines 35, 42-45, 73-81, 92-95, 121-123, 130-137)
+- **Use Cases**: CI/CD pipelines, cron jobs, scripting, automated testing
+- **Testing**: Tested success (no output), tested failure (errors shown), verified exit codes, unit tests pass
+- **Documentation**: Comprehensive README section with CI/CD examples and behavior description
+
 ---
 
-### 🚀 Planned Features (11 remaining)
+### 🚀 Planned Features (10 remaining)
 
 #### High Priority
 
@@ -309,21 +323,14 @@ The OpenAPI CLI is production-ready for CI/CD automation and scripting workflows
     - **Complexity**: Low
     - **Impact**: Low
 
-10. **Quiet Mode** ⭐
-    - `--quiet` / `-q` flag
-    - No output except errors
-    - Only final exit code
-    - **Complexity**: Low
-    - **Impact**: Low
-
-11. **Watch Mode** ⭐
+10. **Watch Mode** ⭐
     - `--watch` flag
     - Re-run on spec file changes
     - Development workflow
     - **Complexity**: Medium
     - **Impact**: Low
 
-12. **Progress Bar** ⭐
+11. **Progress Bar** ⭐
     - Show progress during long test runs
     - "Testing 5/50 endpoints..."
     - Spinner animation

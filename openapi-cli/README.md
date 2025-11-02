@@ -20,6 +20,7 @@ A professional command-line tool for validating OpenAPI specifications and testi
 - **Custom Timeouts** - Configurable request timeouts for slow APIs or fast-fail scenarios
 - **Custom Headers** - Add custom HTTP headers to all requests (repeatable -H flag)
 - **Method Filtering** - Test only specific HTTP methods (--methods GET,POST)
+- **Quiet Mode** - Suppress output except errors and exit codes for CI/CD (--quiet)
 
 ## Installation
 
@@ -100,6 +101,9 @@ openapi-test test path/to/spec.yaml http://api.example.com -H "X-Custom-Header: 
 
 # Filter by HTTP methods
 openapi-test test path/to/spec.yaml http://api.example.com --methods GET,POST
+
+# Quiet mode (only errors and exit code)
+openapi-test test path/to/spec.yaml http://api.example.com --quiet
 ```
 
 **Output Example:**
@@ -404,6 +408,61 @@ openapi-test test spec.yaml https://api.example.com \
   --methods GET \
   --auth-bearer $TOKEN \
   -v -e get-results.json
+```
+
+### Quiet Mode
+
+Suppress all output except errors and the final exit code - ideal for CI/CD:
+
+```bash
+# Quiet mode - only errors shown
+openapi-test test spec.yaml https://api.example.com --quiet
+
+# Short form
+openapi-test test spec.yaml https://api.example.com -q
+
+# With export (errors + export shown)
+openapi-test test spec.yaml https://api.example.com -q -e results.json
+```
+
+**Behavior:**
+- **Hides**: Test progress, success messages, summaries
+- **Shows**: Error messages, export failures
+- **Exit codes**: 0 for success, 1 for failures (same as normal mode)
+
+**Use Cases:**
+- **CI/CD pipelines**: Clean logs, only failures visible
+- **Cron jobs**: Quiet unless there's a problem
+- **Scripting**: Check exit code without noise
+- **Automated testing**: Parse JSON export instead of console output
+
+**What You See:**
+
+Success (quiet):
+```bash
+$ openapi-test test spec.yaml https://api.example.com -q
+All tests passed.
+$ echo $?
+0
+```
+
+Failure (quiet):
+```bash
+$ openapi-test test spec.yaml https://api.example.com -q
+✗ GET     /invalid                                 - HTTP 404 Not Found
+$ echo $?
+1
+```
+
+**CI/CD Example:**
+```bash
+#!/bin/bash
+if openapi-test test spec.yaml https://staging.api.com -q -e results.json; then
+  echo "API tests passed"
+else
+  echo "API tests failed - check results.json"
+  exit 1
+fi
 ```
 
 ### Enhanced Error Messages
