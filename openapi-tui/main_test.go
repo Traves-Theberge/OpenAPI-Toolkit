@@ -1195,22 +1195,16 @@ func TestExportResults(t *testing.T) {
 	}
 
 	// Run export
-	err = exportResults(results, "openapi.yaml", "http://localhost:8080")
+	filename, err := exportResults(results, "openapi.yaml")
 	if err != nil {
 		t.Fatalf("exportResults failed: %v", err)
 	}
-
-	// Find exported file
-	files, err := filepath.Glob("openapi-test-results-*.json")
-	if err != nil {
-		t.Fatalf("Failed to find exported file: %v", err)
-	}
-	if len(files) != 1 {
-		t.Fatalf("Expected 1 exported file, found %d", len(files))
+	if filename == "" {
+		t.Fatal("exportResults returned empty filename")
 	}
 
-	// Read and parse exported file
-	data, err := os.ReadFile(files[0])
+	// Read and parse exported file using the returned filename
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Failed to read exported file: %v", err)
 	}
@@ -1223,9 +1217,6 @@ func TestExportResults(t *testing.T) {
 	// Verify exported data
 	if exported.SpecPath != "openapi.yaml" {
 		t.Errorf("Expected specPath 'openapi.yaml', got '%s'", exported.SpecPath)
-	}
-	if exported.BaseURL != "http://localhost:8080" {
-		t.Errorf("Expected baseUrl 'http://localhost:8080', got '%s'", exported.BaseURL)
 	}
 	if exported.TotalTests != 3 {
 		t.Errorf("Expected totalTests 3, got %d", exported.TotalTests)
@@ -1248,8 +1239,8 @@ func TestExportResults(t *testing.T) {
 	if r.Endpoint != "/users" {
 		t.Errorf("Expected endpoint '/users', got '%s'", r.Endpoint)
 	}
-	if r.StatusCode != 200 {
-		t.Errorf("Expected statusCode 200, got %d", r.StatusCode)
+	if r.Status != "200" {
+		t.Errorf("Expected status '200', got '%s'", r.Status)
 	}
 	if r.Duration == "" {
 		t.Error("Expected duration to be set")
@@ -1259,9 +1250,6 @@ func TestExportResults(t *testing.T) {
 	r = exported.Results[2]
 	if r.Status != "ERR" {
 		t.Errorf("Expected status 'ERR', got '%s'", r.Status)
-	}
-	if r.StatusCode != 0 {
-		t.Errorf("Expected statusCode 0 for error, got %d", r.StatusCode)
 	}
 }
 
@@ -1279,22 +1267,16 @@ func TestExportResultsEmpty(t *testing.T) {
 	}
 
 	// Export empty results
-	err = exportResults([]testResult{}, "spec.yaml", "http://localhost")
+	filename, err := exportResults([]testResult{}, "spec.yaml")
 	if err != nil {
 		t.Fatalf("exportResults failed: %v", err)
 	}
-
-	// Find exported file
-	files, err := filepath.Glob("openapi-test-results-*.json")
-	if err != nil {
-		t.Fatalf("Failed to find exported file: %v", err)
-	}
-	if len(files) != 1 {
-		t.Fatalf("Expected 1 exported file, found %d", len(files))
+	if filename == "" {
+		t.Fatal("exportResults returned empty filename")
 	}
 
-	// Read and parse
-	data, err := os.ReadFile(files[0])
+	// Read and parse using the returned filename
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Failed to read exported file: %v", err)
 	}

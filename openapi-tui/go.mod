@@ -1,4 +1,4 @@
-module openapi-tui
+module github.com/Traves-Theberge/OpenAPI-Toolkit/openapi-tui
 
 go 1.23.0
 
