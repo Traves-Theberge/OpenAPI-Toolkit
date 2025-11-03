@@ -84,7 +84,7 @@ go build
 | **Config Editor** | File-based | ✅ Form-based UI | Different approaches |
 | **Exit Codes** | ✅ Yes (0/1) | ❌ N/A | CLI: CI/CD friendly |
 | **Use Case** | Automation + CI/CD | Interactive Development | Complementary |
-| **Test Coverage** | 3 unit tests (~85%) | 409 tests (100% core) | TUI: Comprehensive |
+| **Test Coverage** | 3 unit tests (~85%) | 453+ tests (90.7% avg) | TUI: Comprehensive |
 
 ## 🛠️ Technologies
 

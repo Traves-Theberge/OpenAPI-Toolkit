@@ -21,7 +21,7 @@ A modern, polished terminal user interface for validating and testing APIs again
 - ✅ **Response Validation** — Validate status codes and content-types against spec
 - 🔗 **Path Parameters** — Automatic substitution of `{id}` placeholders
 - 🔍 **Query Parameters** — Auto-generated query strings
-- 🧪 **100% Test Coverage** — Comprehensive test suite with 409 tests across 8 packages
+- 🧪 **Excellent Test Coverage** — 90.7% average across all packages, 453+ tests
 
 ### Phase 2 — Developer Experience (100% Complete ✅🎉)
 - 💡 **Enhanced Error Messages** — Actionable suggestions for common issues ✅
@@ -39,7 +39,7 @@ A modern, polished terminal user interface for validating and testing APIs again
 - 🎨 **Custom Requests** — Execute custom HTTP requests with full control ✅
 - 🎯 **Selective Testing** — Interactive multi-select UI for choosing specific endpoints ✅
 - 🔄 **Test Retry Logic** — Exponential backoff with configurable retries (0-10, default 3) ✅
-- 🧪 **453 Tests** — Comprehensive test suite with 100% coverage of core logic
+- 🧪 **453+ Tests** — Comprehensive test suite with 90.7% average coverage
 
 ## 🛠️ Installation
 
@@ -229,15 +229,16 @@ go test ./internal/testing -v
 ```
 
 **Test Coverage:**
-- ✅ **config** — 14 tests (88.1% coverage) - Configuration save/load, all auth types
-- ✅ **errors** — 38 tests (100.0% coverage) - Enhanced error messages with suggestions
-- ✅ **export** — 57 tests (93.0% coverage) - JSON/HTML/JUnit export formats
-- ✅ **models** — 15 tests (84.3% coverage) - Data structures and history
-- ✅ **testing** — 141 tests (70.3% coverage) - Request generation, auth, parallel, retry logic
-- ✅ **ui** — 43 tests (12.7% coverage) - View rendering and filters
-- ✅ **validation** — 72 tests (94.3% coverage) - OpenAPI spec & response validation
-- ✅ **root** — 73 tests - Integration and E2E scenarios
-- ✅ **Total:** 453 tests with 100% core logic coverage, all passing
+- ✅ **errors** — 100.0% coverage - Enhanced error messages with suggestions
+- ✅ **ui** — 96.7% coverage - View rendering, filters, forms (45.3% improvement)
+- ✅ **validation** — 94.3% coverage - OpenAPI spec & response validation
+- ✅ **export** — 93.0% coverage - JSON/HTML/JUnit export formats
+- ✅ **models** — 90.2% coverage - Data structures and history (5.9% improvement)
+- ✅ **config** — 88.1% coverage - Configuration save/load, all auth types
+- ✅ **testing** — 80.3% coverage - Request generation, auth, parallel, retry logic (10% improvement)
+- ✅ **Total:** 453+ tests, 90.7% average coverage, all passing ✅
+
+See [COVERAGE-STATUS.md](COVERAGE-STATUS.md) for detailed coverage analysis and roadmap to 100%.
 
 ## 🤝 Contributing
 
